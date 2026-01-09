@@ -1,5 +1,6 @@
 import React from 'react';
 import { Clock, Volume2, Users, PauseCircle, Play } from 'lucide-react';
+import { unlockAudio } from '@/lib/audioUnlock';
 
 interface InstructionPageProps {
   onStart: () => void;
@@ -7,7 +8,7 @@ interface InstructionPageProps {
 
 export const InstructionPage: React.FC<InstructionPageProps> = ({ onStart }) => {
   return (
-    <div className="w-full max-w-3xl mx-auto px-6 py-8 animate-fade-in flex flex-col items-center pb-32">
+    <div className="w-full max-w-3xl mx-auto px-6 py-24 animate-fade-in flex flex-col items-center pb-32">
       
       <h1 className="text-3xl md:text-4xl font-bold text-center mb-10 text-gray-800">
         ก่อนเริ่มทำแบบคัดกรอง
@@ -49,7 +50,7 @@ export const InstructionPage: React.FC<InstructionPageProps> = ({ onStart }) => 
                 </div>
             </li>
 
-             <li className="flex items-start gap-6">
+             {/* <li className="flex items-start gap-6">
                  <div className="bg-purple-100 p-3 rounded-full text-purple-600 shrink-0 mt-1">
                     <PauseCircle size={32} strokeWidth={2.5} />
                 </div>
@@ -58,13 +59,19 @@ export const InstructionPage: React.FC<InstructionPageProps> = ({ onStart }) => 
                         หากไม่สะดวก สามารถหยุดและทำต่อในภายหลังได้
                     </span>
                 </div>
-            </li>
+            </li> */}
         </ul>
       </div>
 
       {/* CTA Button */}
       <button 
-        onClick={onStart}
+         onClick={async () => {
+          console.log('clicked');
+          await unlockAudio().catch(e => console.log('unlock error', e));
+          console.log('after unlock');
+          onStart();
+        }}
+                
         className="
           w-full max-w-md
           bg-primary hover:bg-primaryHover text-white 
@@ -82,7 +89,6 @@ export const InstructionPage: React.FC<InstructionPageProps> = ({ onStart }) => 
 
       {/* Security Note */}
       <p className="text-gray-500 text-center text-sm md:text-base max-w-xl leading-relaxed bg-gray-50 p-4 rounded-xl">
-        <span className="inline-block mr-2">🔒</span>
         ข้อมูลการทำแบบคัดกรองจะถูกเก็บเป็นความลับและเข้ารหัสตามมาตรฐานทางการแพทย์
       </p>
 

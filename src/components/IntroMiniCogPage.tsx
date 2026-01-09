@@ -1,11 +1,41 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Brain, ArrowRight } from 'lucide-react';
+import { speak } from '@/lib/tts_Chirp3';
+import { isAudioUnlocked } from '@/lib/audioUnlock';
+import { stopAudio } from '@/lib/audioManager';
+import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
 
 interface IntroMiniCogPageProps {
   onStart: () => void;
 }
 
 export const IntroMiniCogPage: React.FC<IntroMiniCogPageProps> = ({ onStart }) => {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const hasSpoken = useRef(false);
+
+  useEffect(() => {
+    if (!isAudioUnlocked()) return;
+    if (hasSpoken.current) return;
+
+    hasSpoken.current = true;
+    speakSequentialWithPreload(
+      'สวัสดีครับ... เริ่มจากส่วนแรกนี้ เราจะมาทดสอบความจำกัน มีด้วยกัน 3 ขั้นตอนนะครับ... ขั้นที่ 1... ให้ท่านตั้งใจฟัง และจำคำศัพท์ 3 คำ... ขั้นที่ 2... จะให้ท่านลองวาดรูปหน้าปัดนาฬิกา... และขั้นสุดท้าย... เราจะกลับมาทบทวนคำศัพท์ 3 คำนั้นกันอีกครั้งครับ... ไม่ต้องกังวลนะครับ ทำเท่าที่ทำได้... ถ้าพร้อมแล้ว กดปุ่มสีฟ้าด้านล่าง เพื่อเริ่มกันเลยครับ',
+      () => {
+        setIsSpeaking(false); 
+      },
+      () => {
+        setIsSpeaking(true);
+      }
+    );
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopAudio();
+    };
+  }, []);
+
+
   return (
     <div className="w-full max-w-3xl mx-auto px-6 py-12 animate-fade-in flex flex-col items-center justify-center min-h-[60vh] text-center">
       
@@ -39,20 +69,25 @@ export const IntroMiniCogPage: React.FC<IntroMiniCogPageProps> = ({ onStart }) =
         </ul>
       </div>
 
-      <button 
+     <button
         onClick={onStart}
-        className="
+        disabled={isSpeaking}
+        className={`
           w-full max-w-md
-          bg-primary hover:bg-primaryHover text-white 
-          py-5 px-8 rounded-2xl 
-          text-2xl font-bold 
-          shadow-lg hover:shadow-xl hover:-translate-y-1
-          transform transition-all duration-200
+          py-5 px-8 rounded-2xl text-2xl font-bold
           flex items-center justify-center gap-3
-        "
+          transition-all duration-200
+          ${
+            isSpeaking
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 'bg-primary hover:bg-primaryHover text-white shadow-lg hover:-translate-y-1'
+          }
+        `}
       >
-        <span>เริ่มการทดสอบ</span>
-        <ArrowRight size={32} strokeWidth={3} />
+        <span>
+          {isSpeaking ? 'กำลังอธิบาย...' : 'เริ่มการทดสอบ'}
+        </span>
+        {!isSpeaking && <ArrowRight size={32} strokeWidth={3} />}
       </button>
 
     </div>

@@ -5,14 +5,16 @@ import {
   Building2, 
   Hospital, 
   ArrowRight,
-  CheckCircle2,
   Calendar,
-  Users
+  Users,
+  GraduationCap
 } from 'lucide-react';
-import { Gender, Location, DemographicsData } from '../types';
+import { Gender, Location, DemographicsData } from '@/types';
+
+type EducationLevel = 'below_p4' | 'p4_or_above';
 
 interface DemographicsPageProps {
-  onSubmit: (data: DemographicsData) => void;
+  onSubmit: (data: DemographicsData & { educationLevel: EducationLevel }) => void;
 }
 
 export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) => {
@@ -20,9 +22,10 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
   const [age, setAge] = useState('');
   const [gender, setGender] = useState<Gender | null>(null);
   const [locationType, setLocationType] = useState<Location | null>(null);
+  const [educationLevel, setEducationLevel] = useState<EducationLevel | null>(null);
 
   const handleSubmit = () => {
-    if (!locationDescription.trim() || !age || !gender || !locationType) {
+    if (!locationDescription.trim() || !age || !gender || !locationType || !educationLevel) {
       alert('กรุณากรอกข้อมูลให้ครบทุกข้อ');
       return;
     }
@@ -31,7 +34,8 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
       currentLocationDescription: locationDescription,
       age, 
       gender, 
-      locationType 
+      locationType,
+      educationLevel,
     });
   };
 
@@ -43,7 +47,7 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
       </h1>
 
       <div className="space-y-12">
-        
+
         {/* 1. Location Question */}
         <div className="space-y-4">
           <label className="block text-2xl font-bold text-gray-800 flex items-center gap-2">
@@ -54,14 +58,14 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
             onChange={(e) => setLocationDescription(e.target.value)}
             placeholder="ตัวอย่าง: ที่บ้านในกรุงเทพฯ หรือที่ศูนย์ดูแลผู้สูงอายุ..."
             className="
-              w-full p-6 text-xl rounded-2xl border-4 border-gray-100 bg-gray-50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none min-h-[120px]
+              w-full p-6 text-2xl text-black placeholder-zinc-500 rounded-2xl border-4 border-gray-100 bg-gray-50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none min-h-[120px]
             "
           />
         </div>
 
         {/* 2. Age Input */}
         <div className="space-y-4">
-          <label className="block text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <label className="block text-2xl  font-bold text-gray-800 flex items-center gap-2">
             <Calendar className="text-primary"/> 2. อายุของคุณ (ปี)
           </label>
           <input
@@ -71,21 +75,54 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
             onChange={(e) => setAge(e.target.value)}
             placeholder="เช่น 70"
             className="
-              w-full max-w-[200px] p-5 text-2xl font-bold rounded-2xl border-4 border-gray-100 bg-gray-50 focus:bg-white focus:border-primary transition-all outline-none
+              w-full max-w-[200px] p-5 text-2xl placeholder-zinc-500 text-black rounded-2xl border-4 border-gray-100 bg-gray-50 focus:bg-white focus:border-primary transition-all outline-none
             "
           />
+        </div>
+        
+        {/* 4. Education Level (NEW) */}
+        <div className="space-y-4">
+          <label className="block text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <GraduationCap className="text-primary"/> 3. ระดับการศึกษา (โดยประมาณ)
+          </label>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              onClick={() => setEducationLevel('below_p4')}
+              className={`
+                p-6 rounded-3xl border-4 transition-all flex items-center justify-center h-24 text-xl md:text-2xl font-bold
+                ${educationLevel === 'below_p4'
+                  ? 'bg-primary text-white border-primary shadow-lg'
+                  : 'bg-white text-gray-500 border-gray-100 hover:border-primary/50'}
+              `}
+            >
+              ต่ำกว่าประถมศึกษาปีที่ 4
+            </button>
+
+            <button
+              onClick={() => setEducationLevel('p4_or_above')}
+              className={`
+                p-6 rounded-3xl border-4 transition-all flex items-center justify-center h-24 text-xl md:text-2xl font-bold
+                ${educationLevel === 'p4_or_above'
+                  ? 'bg-primary text-white border-primary shadow-lg'
+                  : 'bg-white text-gray-500 border-gray-100 hover:border-primary/50'}
+              `}
+            >
+              ตั้งแต่ประถมศึกษาปีที่ 4 ขึ้นไป
+            </button>
+          </div>
         </div>
 
         {/* 3. Gender Selection */}
         <div className="space-y-4">
           <label className="block text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Users className="text-primary"/> 3. เพศ
+            <Users className="text-primary"/> 4. เพศ
           </label>
           <div className="flex flex-wrap gap-4">
             {[
-              { id: 'male', label: 'ชาย', icon: '♂' },
-              { id: 'female', label: 'หญิง', icon: '♀' },
-              { id: 'other', label: 'อื่น ๆ', icon: '⚪' }
+              { id: 'male', label: 'ชาย' },
+              { id: 'female', label: 'หญิง' },
+              { id: 'other', label: 'อื่น ๆ' }
             ].map((option) => (
               <button
                 key={option.id}
@@ -103,10 +140,10 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
           </div>
         </div>
 
-        {/* 4. Location Type */}
+        {/* 5. Location Type */}
         <div className="space-y-4">
           <label className="block text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Home className="text-primary"/> 4. ประเภทสถานที่ปัจจุบัน
+            <Home className="text-primary"/> 5. ประเภทสถานที่ปัจจุบัน
           </label>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
@@ -121,6 +158,7 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
               <Home size={48} />
               <span className="text-xl font-bold">ที่บ้าน</span>
             </button>
+
             <button
               onClick={() => setLocationType('nursing_home')}
               className={`
@@ -133,6 +171,7 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
               <Building2 size={48} />
               <span className="text-xl font-bold">ศูนย์ดูแล</span>
             </button>
+
             <button
               onClick={() => setLocationType('hospital')}
               className={`
@@ -147,6 +186,8 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
             </button>
           </div>
         </div>
+
+       
 
       </div>
 
@@ -167,7 +208,6 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
           <ArrowRight size={32} strokeWidth={3} />
         </button>
       </div>
-
     </div>
   );
 };

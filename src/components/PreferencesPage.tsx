@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check, Type, ArrowRight } from 'lucide-react';
-import { FontSize } from '../types';
+import { FontSize } from '@/types';
 
 interface PreferencesPageProps {
   currentFontSize: FontSize;
@@ -14,7 +14,7 @@ export const PreferencesPage: React.FC<PreferencesPageProps> = ({
   onContinue,
 }) => {
   return (
-    <div className="flex flex-col items-center w-full max-w-3xl mx-auto px-6 py-8 animate-fade-in pb-32">
+    <div className="flex flex-col items-center w-full max-w-3xl mx-auto px-6 py-24 animate-fade-in pb-32">
       
       <h1 className="text-3xl md:text-4xl font-bold text-center mb-10 text-gray-800">
         ตั้งค่าการใช้งาน

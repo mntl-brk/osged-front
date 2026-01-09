@@ -27,7 +27,7 @@ export const VerificationPage: React.FC<VerificationPageProps> = ({ onSubmit }) 
       </h1>
       
       <p className="text-xl md:text-2xl text-gray-600 text-center mb-12 leading-relaxed font-medium">
-        กรุณากรอกรหัส <span className="text-primary font-black">V-XXXX</span> ที่ท่านได้รับจากแพทย์<br/>
+        กรุณากรอกรหัส <span className="text-primary font-black">กXXX</span> ที่ท่านได้รับจากแพทย์<br/>
         หรือผู้ดูแลโครงการ เพื่อเริ่มต้นการประเมิน
       </p>
 
@@ -36,14 +36,14 @@ export const VerificationPage: React.FC<VerificationPageProps> = ({ onSubmit }) 
           type="text"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
-          placeholder="V-XXXX"
+          placeholder="กXXX"
           className="
             w-full py-6 px-8 
-            text-4xl font-black tracking-[0.2em] text-center
+            text-4xl text-black tracking-[0.2em] text-center
             border-4 border-gray-100 rounded-[35px] bg-gray-50
             focus:border-primary focus:bg-white focus:ring-8 focus:ring-primary/5
             outline-none transition-all
-            placeholder:text-gray-200 placeholder:text-2xl placeholder:tracking-normal placeholder:font-bold
+            placeholder:text-gray-400 placeholder:text-2xl placeholder:tracking-normal placeholder:font-bold
           "
         />
       </div>
