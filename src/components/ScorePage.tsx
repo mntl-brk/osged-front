@@ -127,7 +127,7 @@ export const ScorePage: React.FC<ScorePageProps> = ({
                 className="w-full h-24 bg-red-600 text-white text-3xl font-black rounded-[30px] shadow-xl flex items-center justify-center gap-4 hover:bg-red-700 transition-all animate-pulse"
             >
                 <Phone size={36} fill="white" />
-                สายด่วนสุขภาพจิต 1323
+                สายด่วนสุขภาพจิต 
             </a>
         )}
       </div>

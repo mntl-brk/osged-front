@@ -12,12 +12,14 @@ export type Page = 'home' | 'verification' | 'consent' | 'preferences' | 'demogr
 
 export type Gender = 'male' | 'female' | 'other';
 export type Location = 'home' | 'nursing_home' | 'hospital';
+export type EducationLevel = 'below_p4' | 'p4_or_above';
 
 export interface DemographicsData {
   currentLocationDescription: string;
   age: string;
   gender: Gender | null;
   locationType: Location | null;
+  educationLevel: EducationLevel;
 }
 
 export interface WordSet {

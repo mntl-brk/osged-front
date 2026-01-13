@@ -4,6 +4,7 @@ import { WordSet } from '../types';
 import { stopAudio } from '@/lib/audioManager';
 import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
 import { isAudioUnlocked } from '@/lib/audioUnlock';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 
 interface AssessmentWordRegistrationPageProps {
   wordSet: WordSet;
@@ -26,9 +27,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
   // State
   const [hasPlayedAudio, setHasPlayedAudio] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [tempTranscript, setTempTranscript] = useState('');
-  const [recognizedWords, setRecognizedWords] = useState<string[]>([]);
   const [rounds, setRounds] = useState<RoundResult[]>([]);
   const [completed, setCompleted] = useState(false);
   
@@ -75,67 +74,17 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     }, []);
 
   // Initialize Speech Recognition
- useEffect(() => {
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return;
-
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    const recognition = new SpeechRecognition();
-
-    recognition.lang = 'th-TH';
-    recognition.continuous = true;      
-    recognition.interimResults = false;   
-    recognition.maxAlternatives = 1;
-    
-    recognition.onresult = (event: any) => {
-      let newText = '';
-
-      // อ่านเฉพาะ result ที่เพิ่มเข้ามา
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          newText += event.results[i][0].transcript + ' ';
-        }
-      }
-
-      if (!newText) return;
-
-      transcriptBufferRef.current += newText;
-
-      const finalTranscript = transcriptBufferRef.current.trim();
-      const words = finalTranscript.split(/\s+/).filter(Boolean);
-
-      setTempTranscript(finalTranscript);
-      setRecognizedWords(words);
-    };
-
-    recognition.onerror = (e: any) => {
-      console.warn('Speech error:', e.error);
-      setIsListening(false);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognitionRef.current = recognition;
-
-    return () => recognition.abort();
-  }, []);
-
-  // Reset state when wordSet changes
-  useEffect(() => {
-    setHasPlayedAudio(false);
-    setIsPlaying(false);
-    setRounds([]);
-    setCompleted(false);
-    setIsListening(false);
-    setTempTranscript('');
-    setRecognizedWords([]);
-    hasSpokenMicGuide.current = false;
-
-    if (fallbackTimeoutRef.current) window.clearTimeout(fallbackTimeoutRef.current);
-  }, [wordSet]);
+    const {
+      isListening,
+      transcript,
+      words: recognizedWords,
+      start,
+      stop,
+      reset,
+    } = useSpeechRecognition({
+      lang: 'th-TH',
+      maxWords: 3,
+    });
 
   const speakWords = async () => {
     if (hasPlayedAudio || isPlaying) return;
@@ -197,48 +146,29 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     if (fallbackTimeoutRef.current) window.clearTimeout(fallbackTimeoutRef.current);
   };
 
-  const toggleListening = () => {
-    if (isListening) {
-        recognitionRef.current?.stop();
-        setIsListening(false);
-    } else {
-        transcriptBufferRef.current = '';  
-        setTempTranscript(''); 
-        setRecognizedWords([]);
-        try {
-            recognitionRef.current?.start();
-            setIsListening(true);
-        } catch(e) {
-            setTimeout(() => {
-                try { recognitionRef.current.start(); setIsListening(true); } catch(err) {}
-            }, 300);
-        }
-    }
-  };
+  useEffect(() => {
+    setHasPlayedAudio(false);
+    setCompleted(false);
+    setAttempt(1);
+    reset();
+    hasSpokenMicGuide.current = false;
+    hasSpokenCompletion.current = false;
+  }, [wordSet]);
+
 
   const handleSendAnswer = () => {
-    if (isListening) {
-        recognitionRef.current?.stop();
-        setIsListening(false);
-    }
-    if (!tempTranscript.trim()) {
-        alert("กรุณาพูดคำศัพท์ก่อนกดส่ง");
-        return;
-    }
-    handleRoundComplete(tempTranscript);
+    stop();
 
-    transcriptBufferRef.current = '';
-    setTempTranscript('');
-    setRecognizedWords([]);
-  };
+    if (!transcript.trim()) {
+      alert('กรุณาพูดคำศัพท์ก่อนกดส่ง');
+      return;
+    }
 
-  const handleRoundComplete = (transcript: string) => {
-    const normalizedText = transcript.trim();
-    const isCorrect = wordSet.words.every(word =>
-      normalizedText.includes(word)
+    const normalized = transcript.trim();
+    const isCorrect = wordSet.words.every((w) =>
+      normalized.includes(w)
     );
 
-    // ✅ ตอบถูก → จบทันที
     if (isCorrect) {
       setCompleteStatus('correct');
       setCompleted(true);
@@ -246,25 +176,21 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     }
 
     if (attempt === 1) {
-      // รอบแรก → ปลอบ + replay
       setAttempt(2);
-      setNeedReplay(true);        // AI พูด
-      setAutoReplay(true);        // อ่านคำ 3 คำใหม่
-      setHasPlayedAudio(false);   // กลับไปลำโพงฟ้า
+      setAutoReplay(true);
+      setHasPlayedAudio(false);
+      reset();
       return;
     }
 
     if (attempt === 2) {
-      // รอบสอง → พูดอย่างเดียว
       setAttempt(3);
+      reset();
       return;
     }
 
-    if (attempt === 3) {
-      // รอบสุดท้าย → แสดงว่าผิด
-      setCompleteStatus('attempted');
-      setCompleted(true);
-    }
+    setCompleteStatus('attempted');
+    setCompleted(true);
   };
 
   const showPlayButton = !hasPlayedAudio;
@@ -290,13 +216,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
    }, [showMicSection]);
 
   const getDisplayWords = () => {
-    const words = tempTranscript.trim().split(/\s+/).filter(Boolean);
-
-    return [
-      words[0] || '',
-      words[1] || '',
-      words[2] || '',
-    ];
+    return showMicSection ? recognizedWords : Array(3).fill('???');
   };
 
   useEffect(() => {
@@ -326,6 +246,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
       `;
     }
 
+    setIsSpeaking(true);
     speakSequentialWithPreload(
       text,
       () => {
@@ -480,7 +401,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
 
               {/* Mic Button */}
               <button
-                onClick={toggleListening}
+                onClick={() => (isListening ? stop() : start())}
                 disabled={isSpeaking}
                 className={`
                   w-36 h-36 rounded-full flex flex-col items-center justify-center
@@ -571,19 +492,21 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
               คุณจำคำศัพท์ได้ถูกต้องครบทั้งสามคำ อย่าลืมจำคำเหล่านี้ไว้
             </p>
 
-            <button
+           <button
               onClick={onNext}
-              className="
-                mt-4
-                w-full max-w-sm
-                bg-primary hover:bg-primaryHover
-                text-white h-24
-                rounded-3xl text-3xl font-black
-                shadow-2xl
+              disabled={isSpeaking}
+              className={`
+                mt-4 w-full max-w-sm h-24 rounded-3xl text-3xl font-black
                 flex items-center justify-center gap-4
-              "
+                transition-all
+                ${
+                  isSpeaking
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-primary hover:bg-primaryHover text-white'
+                }
+              `}
             >
-              ไปข้อถัดไป
+              {isSpeaking ? 'กำลังอธิบาย...' : 'ไปข้อถัดไป'}
               <ArrowRight size={44} strokeWidth={4} />
             </button>
           </div>

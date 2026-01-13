@@ -3,18 +3,28 @@
 import { AppShell } from '@/components/AppShell'
 import { AssessmentWordRegistrationPage } from '@/components/AssessmentWordRegistrationPage'
 import { useAssessmentStore } from '@/store/assessmentStore'
-import { getRandomWordSet } from '@/lib/wordSets'
+import { getWordSetByEducation } from '@/lib/wordSets'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 export default function WordRegistrationRoute() {
   const router = useRouter()
+
+  const demographics = useAssessmentStore((s) => s.demographics)
   const currentWordSet = useAssessmentStore((s) => s.currentWordSet)
   const setCurrentWordSet = useAssessmentStore((s) => s.setCurrentWordSet)
 
   useEffect(() => {
-    if (!currentWordSet) router.replace('/minicog/intro')
-  }, [currentWordSet, router])
+    if (!demographics) {
+      router.replace('/demographics')
+      return
+    }
+
+    if (!currentWordSet) {
+      const wordSet = getWordSetByEducation(demographics.educationLevel)
+      setCurrentWordSet(wordSet)
+    }
+  }, [demographics, currentWordSet, router, setCurrentWordSet])
 
   if (!currentWordSet) return null
 
@@ -22,7 +32,9 @@ export default function WordRegistrationRoute() {
     <AppShell>
       <AssessmentWordRegistrationPage
         wordSet={currentWordSet}
-        onReroll={() => setCurrentWordSet(getRandomWordSet(currentWordSet.id))}
+        onReroll={() => {
+          setCurrentWordSet(currentWordSet)
+        }}
         onNext={() => router.push('/minicog/clock-drawing')}
       />
     </AppShell>

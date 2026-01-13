@@ -9,12 +9,11 @@ import {
   Users,
   GraduationCap
 } from 'lucide-react';
-import { Gender, Location, DemographicsData } from '@/types';
+import { Gender, Location, DemographicsData, EducationLevel } from '@/types';
 
-type EducationLevel = 'below_p4' | 'p4_or_above';
 
 interface DemographicsPageProps {
-  onSubmit: (data: DemographicsData & { educationLevel: EducationLevel }) => void;
+  onSubmit: (data: DemographicsData) => void;
 }
 
 export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) => {

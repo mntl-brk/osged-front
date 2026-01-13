@@ -52,8 +52,11 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
         if (hasSpoken.current) return;
     
         hasSpoken.current = true;
+
+        setIsSpeaking(true);
+
         speakSequentialWithPreload(
-          'ต่อไปจะเป็นการสร้างนาฬิกานะครับ กรุณาลากตัวเลขและเข็มนาฬิกา เพื่อบอกเวลา สิบเอ็ดนาฬิกา สิบ นาที ค่อย ๆ ทำ ไม่ต้องรีบครับ',
+          'ต่อไปจะเป็นการสร้างนาฬิกานะครับ กรุณาลากตัวเลขและเข็มนาฬิกา ทางกล่องด้านขวามือของหน้าจอ เพื่อบอกเวลา สิบเอ็ดนาฬิกา สิบ นาที ค่อย ๆ ทำ ไม่ต้องรีบครับ',
           () => {
             setIsSpeaking(false); 
           },
@@ -78,11 +81,11 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
   };
   
   const handlePointerDown = (e: React.PointerEvent, id: number | 'hour' | 'minute') => {
+    if (isSpeaking) return;
     e.preventDefault();
     pushHistory();
     setDraggingId(id);
   };
-
   
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!draggingId || !containerRef.current) return;
@@ -109,6 +112,8 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
   const handlePointerUp = () => setDraggingId(null);
 
   const placeFromPalette = (id: number | 'hour' | 'minute') => {
+    if (isSpeaking) return;
+
     pushHistory();
 
     if (typeof id === 'number') {
@@ -402,13 +407,24 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
       </div>
 
       <div className="mt-14 w-full max-w-sm">
-        <button 
-          onClick={() => onNext(generateClockImage())}
-          className="
-            w-full bg-primary hover:bg-primaryHover text-white h-24 rounded-3xl text-3xl font-black shadow-xl hover:-translate-y-2 transform transition-all flex items-center justify-center gap-4
-          "
+       <button
+          onClick={() => {
+            if (isSpeaking) return;
+            onNext(generateClockImage());
+          }}
+          disabled={isSpeaking}
+          className={`
+            w-full h-24 rounded-3xl text-3xl font-black
+            flex items-center justify-center gap-4
+            transition-all shadow-xl
+            ${
+              isSpeaking
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-primary hover:bg-primaryHover text-white hover:-translate-y-2'
+            }
+          `}
         >
-          <span>เสร็จสิ้น</span>
+          <span>{isSpeaking ? 'กำลังอธิบาย...' : 'เสร็จสิ้น'}</span>
           <ArrowRight size={40} strokeWidth={4} />
         </button>
       </div>
