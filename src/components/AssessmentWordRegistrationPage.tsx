@@ -58,7 +58,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
   
       hasSpoken.current = true;
       speakSequentialWithPreload(
-        'ขั้นตอนที่หนึ่ง การจำคำศัพท์ครับ ในอีกสักครู่ ผมจะอ่านคำศัพท์จำนวนสามคำให้ท่านฟัง ขอให้ท่านตั้งใจฟัง และพยายามจำคำศัพท์ทั้งสามคำไว้ให้ดีนะครับ เมื่อพร้อมแล้ว กรุณากดปุ่มลำโพงสีฟ้าตรงกลางหน้าจอ เพื่อเริ่มฟังได้เลยครับ',
+        'ต่อไปเป็นการจำคำศัพท์ ผมจะอ่านคำศัพท์สามคำให้ฟัง ขอให้ตั้งใจฟังและจำคำเหล่านั้นไว้นะครับ เมื่อพร้อมแล้ว กดปุ่มลำโพงได้เลยครับ',
         () => {
           setIsSpeaking(false); 
         },
@@ -279,7 +279,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
       hasSpokenMicGuide.current = true;
 
       speakSequentialWithPreload(
-        'ต่อไปนะครับ ขอให้ท่านพูดคำศัพท์ทั้งสามคำที่ได้ยินเมื่อครู่นี้ พูดทีละคำก็ได้ ไม่ต้องรีบครับ เมื่อพร้อมแล้ว ให้กดปุ่มสีแดงตรงกลางด้านล่างเพื่อเริ่มพูด และเมื่อพูดครบแล้ว ให้กดปุ่มส่งคำตอบครับ',
+        'ขอให้พูดคำศัพท์ทั้งสามคำที่ได้ยินเมื่อครู่นี้นะครับ พูดทีละคำก็ได้ ไม่ต้องรีบ เมื่อพร้อมแล้ว กดปุ่มเพื่อเริ่มพูดได้เลยครับ',
         () => {
           setIsSpeaking(false);
         },
@@ -349,7 +349,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     </h1>
   )}
 
-   {attempt === 2 && (
+   {attempt === 2 && !completed && (
       <div className="mb-6 flex justify-center">
         <p className="text-orange-500 font-semibold text-3xl">
           😊 ไม่เป็นไรนะครับ เดี๋ยวเราลองฟังและพูดอีกครั้งกัน
@@ -370,14 +370,13 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
             const displayText = showMicSection ? (displayWords[i] || '...') : '???';
             return (
                  <div key={i} className={`
-                    flex flex-col items-center justify-center
-                    px-4 py-3 rounded-2xl border-4 min-w-[140px] h-[100px] transition-all
+                    w-40 h-24 rounded-2xl border-4 flex flex-col items-center justify-center transition-all
                     ${recognizedWords[i] 
                         ? 'bg-blue-50 border-primary text-primary shadow-lg scale-105' 
-                        : 'bg-gray-50 border-gray-200 text-gray-300'}
+                        : 'bg-gray-50 border-gray-200 text-gray-400'}
                  `}>
-                    <span className="text-sm font-bold opacity-70 mb-1">คำที่ {i+1}</span>
-                    <span className="text-3xl font-black">
+                    <span className="text-base font-semibold opacity-70">คำที่ {i+1}</span>
+                    <span className="text-4xl font-black">
                         {displayText}
                     </span>
                  </div>
@@ -413,7 +412,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
                     </p>
                 </div>
 
-                <div className="flex flex-col gap-4 w-full max-w-xs">
+                {/* <div className="flex flex-col gap-4 w-full max-w-xs">
                   <button
                       onClick={onReroll}
                       disabled={isPlaying || isSpeaking}
@@ -439,26 +438,20 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
                       <VolumeX size={16} />
                       <span>ไม่ได้ยินเสียง? ข้ามไปพูดเลย</span>
                   </button>
-                </div>
+                </div> */}
             </div>
         ) : null}
 
         {showMicSection && (
-          <div className="flex flex-col items-center gap-10 animate-fade-in w-full bg-white p-10 rounded-[40px] border-4 border-primary/20 shadow-2xl">
+          <div className="flex flex-col items-center gap-10 animate-fade-in w-full min-w-3xl bg-white px-10 py-12 rounded-[40px] border-4 border-primary/20 shadow-2xl">
 
             {/* ===== Guide Text ===== */}
             <div className="text-center space-y-2">
 
                <div className={`${isSpeaking ? 'opacity-30 blur-sm' : ''} transition-all`}>
-                <p className="text-lg text-gray-500">
+                <p className="text-xl text-gray-500">
                   คุณพูดได้ <span className="font-bold">{recognizedWords.length}</span> จาก 3 คำ
                 </p>
-
-                {recognizedWords.length < 3 && (
-                  <p className="text-gray-400 text-base">
-                    หากนึกไม่ออก สามารถกดส่งคำตอบได้เลยครับ
-                  </p>
-                )}
               </div>
             </div>
 
@@ -527,6 +520,9 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
               </button>
 
             </div>
+              <p className="text-gray-400 text-base">
+                      หากนึกไม่ออก สามารถกดส่งคำตอบได้เลยครับ
+              </p>
           </div>
         )}
 

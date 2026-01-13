@@ -1,27 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, ArrowRight, StopCircle, Send, CheckCircle2, MessageSquareQuote, RotateCcw } from 'lucide-react';
-
+import { TGDS_QUESTIONS } from '@/data/tgdsQuestions';
 interface AssessmentMoodTGDSPageProps {
   onComplete: (score: number) => void;
 }
-
-const TGDS_QUESTIONS = [
-  { id: 1, text: "คุณพอใจกับชีวิตความเป็นอยู่ของคุณตอนนี้หรือไม่?", scoreTarget: false },
-  { id: 2, text: "คุณไม่อยากทำกิจกรรมที่เคยชอบทำหรือเลิกทำไปหรือไม่?", scoreTarget: true },
-  { id: 3, text: "คุณรู้สึกว่าชีวิตของคุณว่างเปล่าหรือไม่?", scoreTarget: true },
-  { id: 4, text: "คุณรู้สึกเบื่อหน่ายบ่อย ๆ หรือไม่?", scoreTarget: true },
-  { id: 5, text: "คุณหวังว่าจะมีสิ่งดี ๆ เกิดขึ้นในวันข้างหน้าหรือไม่?", scoreTarget: false },
-  { id: 6, text: "คุณมีเรื่องกังวลตลอดเวลา และเลิกคิดไม่ได้หรือไม่?", scoreTarget: true },
-  { id: 7, text: "ส่วนใหญ่แล้วคุณรู้สึกอารมณ์ดีหรือไม่?", scoreTarget: false },
-  { id: 8, text: "คุณรู้สึกกลัวว่าจะมีเรื่องไม่ดีเกิดขึ้นกับคุณหรือไม่?", scoreTarget: true },
-  { id: 9, text: "ส่วนใหญ่คุณชอบอยู่กับบ้าน มากกว่าที่จะออกไปข้างนอกหรือไม่?", scoreTarget: true },
-  { id: 10, text: "คุณรู้สึกว่าความจำของคุณไม่ดีเท่าคนอื่นหรือไม่?", scoreTarget: true },
-  { id: 11, text: "คุณรู้สึกว่าการที่มีชีวิตอยู่ถึงปัจจุบันนี้ เป็นเรื่องที่ดีหรือไม่?", scoreTarget: false },
-  { id: 12, text: "คุณรู้สึกว่าตัวเองไม่มีค่าหรือไม่?", scoreTarget: true },
-  { id: 13, text: "คุณรู้สึกว่าตนเองมีพลังเต็มที่หรือไม่?", scoreTarget: false },
-  { id: 14, text: "คุณรู้สึกว่าเหตุการณ์ปัจจุบันสิ้นหวังหรือไม่?", scoreTarget: true },
-  { id: 15, text: "คุณรู้สึกว่าคนอื่นโชคดีกว่าคุณหรือไม่?", scoreTarget: true },
-];
 
 type AssessmentPhase = 'READING' | 'ANSWERING';
 

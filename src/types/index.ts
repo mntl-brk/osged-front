@@ -45,3 +45,10 @@ export interface PatientRecord {
   };
   status: 'normal' | 'mild-risk' | 'high-risk';
 }
+
+export interface TGDSQuestion {
+  id: number;
+  text: string;
+  scoreTarget: boolean;
+}
+

@@ -1,172 +1,283 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowRight, Delete } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Mic, StopCircle, Send, RotateCcw } from 'lucide-react';
 import { WordSet } from '../types';
-import { AssessmentProgress } from './AssessmentProgress';
+import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
+import { isAudioUnlocked } from '@/lib/audioUnlock';
+import { stopAudio } from '@/lib/audioManager';
 
 interface AssessmentWordRecallPageProps {
   correctWordSet: WordSet;
   onNext: (score: number, recalledWords: string[]) => void;
 }
 
-// Pool of distractor words to mix with correct words
-const DISTRACTORS = [
-  'แมว', 'ดินสอ', 'โต๊ะ', 'แม่น้ำ', 'หนังสือ', 
-  'รองเท้า', 'นาฬิกา', 'ข้าว', 'แก้วน้ำ', 'โทรศัพท์'
-];
-
-export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> = ({ 
-  correctWordSet, 
-  onNext 
+export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> = ({
+  correctWordSet,
+  onNext,
 }) => {
-  const [inputs, setInputs] = useState<string[]>(['', '', '']);
-  const [choices, setChoices] = useState<string[]>([]);
+  const recognitionRef = useRef<any>(null);
+  const transcriptBufferRef = useRef('');
+  const hasSpokenGuideRef = useRef(false);
 
-  // Initialize choices (Correct words + Random Distractors)
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [recognizedWords, setRecognizedWords] = useState<string[]>([]);
+  const [hasSpoken, setHasSpoken] = useState(false);
+
+  /* ================= AI GUIDE ================= */
   useEffect(() => {
-    // 1. Start with correct words
-    let pool = [...correctWordSet.words];
-    
-    // 2. Add 6 random distractors
-    const shuffledDistractors = [...DISTRACTORS].sort(() => 0.5 - Math.random());
-    pool = pool.concat(shuffledDistractors.slice(0, 6));
+    if (!isAudioUnlocked()) return;
+    if (hasSpokenGuideRef.current) return;
 
-    // 3. Shuffle everything
-    const shuffledPool = pool.sort(() => 0.5 - Math.random());
-    
-    setChoices(shuffledPool);
-  }, [correctWordSet]);
+    hasSpokenGuideRef.current = true;
 
-  const handleInputChange = (index: number, value: string) => {
-    const newInputs = [...inputs];
-    newInputs[index] = value;
-    setInputs(newInputs);
-  };
+    speakSequentialWithPreload(
+      'ต่อไปนะครับ ขอให้พูดคำศัพท์ทั้งสามคำที่ขอให้จำไว้ก่อนหน้านี้ พูดทีละคำก็ได้ ไม่ต้องรีบ เมื่อพร้อมแล้ว กดปุ่มไมค์สีแดงเพื่อเริ่มพูดครับ',
+      () => setIsSpeaking(false),
+      () => setIsSpeaking(true)
+    );
 
-  const handleChoiceClick = (word: string) => {
-    // Check if word is already selected (in inputs)
-    const existingIndex = inputs.indexOf(word);
+    return () => stopAudio();
+  }, []);
 
-    if (existingIndex >= 0) {
-      // If already selected, remove it
-      const newInputs = [...inputs];
-      newInputs[existingIndex] = '';
-      setInputs(newInputs);
-    } else {
-      // If not selected, find first empty slot
-      const emptyIndex = inputs.findIndex(val => val.trim() === '');
-      if (emptyIndex >= 0) {
-        const newInputs = [...inputs];
-        newInputs[emptyIndex] = word;
-        setInputs(newInputs);
+  /* ================= Speech Recognition ================= */
+  useEffect(() => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'th-TH';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event: any) => {
+      let newText = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          newText += event.results[i][0].transcript + ' ';
+        }
       }
+
+      if (!newText) return;
+
+      transcriptBufferRef.current += newText;
+
+      const words = transcriptBufferRef.current
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 3);
+
+      setRecognizedWords(words);
+      setHasSpoken(true);
+    };
+
+    recognition.onend = () => setIsListening(false);
+    recognitionRef.current = recognition;
+
+    return () => recognition.abort();
+  }, []);
+
+  /* ================= Actions ================= */
+  const toggleListening = () => {
+    if (isSpeaking) return;
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current?.start();
+      setIsListening(true);
     }
   };
 
+  const handleUndoLastWord = () => {
+    if (recognizedWords.length === 0) return;
+    const updated = recognizedWords.slice(0, -1);
+    setRecognizedWords(updated);
+    transcriptBufferRef.current = updated.join(' ');
+  };
+
   const calculateScore = () => {
-    let score = 0;
-    // Normalize correct words
     const targets = correctWordSet.words.map(w => w.trim());
-    
-    // Check inputs
-    inputs.forEach(input => {
-      if (targets.includes(input.trim())) {
-        score += 1;
-      }
-    });
-    return score;
+    return recognizedWords.filter(w => targets.includes(w)).length;
   };
 
   const handleSubmit = () => {
-    const score = calculateScore();
-    onNext(score, inputs);
+    if (isListening) recognitionRef.current?.stop();
+    onNext(calculateScore(), recognizedWords);
   };
 
-  return (
-    <div className="w-full max-w-4xl mx-auto px-6 py-8 animate-fade-in flex flex-col items-center pb-32">
-      
-      {/* Progress Bar - Step 3 */}
-      <AssessmentProgress currentStep={3} />
+  const displayWords = [
+    recognizedWords[0] || '',
+    recognizedWords[1] || '',
+    recognizedWords[2] || '',
+  ];
 
-      {/* A. Header */}
-      <h1 className="text-3xl md:text-5xl font-bold text-center mb-6 text-gray-900 mt-4">
-        คุณยังจำคำที่แสดงก่อนหน้านี้ได้หรือไม่?
+  /* ================= UI ================= */
+  return (
+    <div className="w-full max-w-5xl mx-auto px-6 py-10 animate-fade-in flex flex-col items-center">
+
+      <h1 className="text-3xl md:text-5xl font-bold text-center mb-8 text-gray-900 mt-12">
+        พูดคำทั้ง 3 คำที่ขอให้จำก่อนหน้านี้
       </h1>
 
-      {/* B. Instruction */}
-      <p className="text-xl md:text-2xl text-gray-600 font-medium text-center mb-10">
-        โปรดพิมพ์คำที่จำได้ หรือเลือกจากรายการด้านล่าง
-      </p>
-
-      {/* C. Input Fields (Free Recall) */}
-      <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-        {inputs.map((value, index) => (
-          <input
-            key={index}
-            type="text"
-            value={value}
-            onChange={(e) => handleInputChange(index, e.target.value)}
-            placeholder={`พิมพ์คำที่จำได้ ${index + 1}`}
-            className="
-              w-full h-16 md:h-20 
-              text-2xl md:text-3xl font-medium text-center
-              border-2 border-[#C4C4C4] rounded-xl
-              focus:border-primary focus:ring-2 focus:ring-primary/20
-              outline-none transition-all
-              placeholder:text-gray-300
-            "
-          />
-        ))}
-      </div>
-
-      {/* C.2 Choice Buttons (Recognition Support) */}
-      <div className="w-full mb-12">
-        <p className="text-lg text-gray-500 mb-4 text-center">
-          (แตะเพื่อเลือกคำตอบ)
-        </p>
-        <div className="flex flex-wrap justify-center gap-4">
-          {choices.map((word, idx) => {
-            const isSelected = inputs.includes(word);
-            return (
-              <button
-                key={idx}
-                onClick={() => handleChoiceClick(word)}
-                className={`
-                  min-w-[120px] px-6 h-[60px] 
-                  rounded-2xl 
-                  text-2xl font-medium 
-                  border-2 transition-all duration-200
-                  flex items-center justify-center
-                  shadow-sm
-                  ${isSelected 
-                    ? 'bg-primary text-white border-primary shadow-inner scale-95' 
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-primary/50 hover:bg-gray-50 hover:-translate-y-1 hover:shadow-md'}
-                `}
-              >
-                {word}
-              </button>
-            );
-          })}
+      {/* Word Slots */}
+        <div className="flex justify-center gap-6">
+          {[0, 1, 2].map(i => (
+            <div
+              key={i}
+              className={`
+                w-40 h-24 rounded-2xl border-4
+                flex flex-col items-center justify-center
+                transition-all
+                ${
+                  displayWords[i]
+                    ? 'bg-blue-50 border-primary text-primary shadow-lg scale-105'
+                    : 'bg-gray-50 border-gray-200 text-gray-400'
+                }
+              `}
+            >
+              <span className="text-base font-semibold opacity-70">
+                คำที่ {i + 1}
+              </span>
+              <span className="text-4xl font-black">
+                {displayWords[i] || '...'}
+              </span>
+            </div>
+          ))}
         </div>
-      </div>
 
-      {/* D. Next Button */}
-      <button 
-        onClick={handleSubmit}
+      {/* ================= Interaction Panel ================= */}
+      <div
         className="
-          w-full max-w-sm
-          bg-primary hover:bg-primaryHover text-white 
-          h-16 md:h-20
-          rounded-2xl 
-          text-2xl md:text-3xl font-bold 
-          shadow-lg hover:shadow-xl hover:-translate-y-1
-          transform transition-all duration-200
-          flex items-center justify-center gap-4
+          w-full max-w-3xl
+          bg-white
+          border-4 border-primary/20
+          rounded-[48px]
+          shadow-2xl
+          px-10 py-12
+          mt-6
+          flex flex-col items-center gap-10
         "
       >
-        <span>ถัดไป</span>
-        <ArrowRight size={36} strokeWidth={3} />
-      </button>
+
+        {/* Status */}
+        <div className="text-center space-y-2">
+
+               <div className={`${isSpeaking ? 'opacity-30 blur-sm' : ''} transition-all`}>
+                <p className="text-xl text-gray-500">
+                  คุณพูดได้ <span className="font-bold">{recognizedWords.length}</span> จาก 3 คำ
+                </p>
+              </div>
+            </div>
+
+            {/* ===== Status ===== */}
+            <div className="h-4 flex items-center justify-center">
+              {isSpeaking ? (
+                <span className="text-gray-500 text-lg font-semibold animate-pulse">
+                   กำลังอธิบาย กรุณารอฟังให้จบ
+                </span>
+              ) : isListening ? (
+                <div className="flex items-center gap-4 bg-red-50 px-8 py-3 rounded-full border-2 border-red-200">
+                  <ListeningWave />
+                  <span className="text-red-600 font-bold text-xl">
+                    กำลังฟังอยู่...
+                  </span>
+                </div>
+              ) : (
+                <span className="text-gray-400 text-lg italic">
+                  กดปุ่มไมค์ด้านล่างเพื่อเริ่มพูด
+                </span>
+              )}
+            </div>
+
+        {/* Actions */}
+        <div className="flex items-center justify-center gap-12">
+
+          {/* Undo */}
+          <button
+            onClick={handleUndoLastWord}
+            disabled={recognizedWords.length === 0}
+            className={`
+              w-20 h-20 rounded-full
+              flex items-center justify-center
+              shadow-md transition-all
+              ${
+                recognizedWords.length === 0
+                  ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+              }
+            `}
+          >
+            <RotateCcw size={28} />
+          </button>
+
+          {/* Mic */}
+          <button
+            onClick={toggleListening}
+            disabled={isSpeaking}
+            className={`
+              w-36 h-36 rounded-full flex flex-col items-center justify-center
+              shadow-2xl border-[6px] transition-all
+              ${
+                isSpeaking
+                  ? 'bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed'
+                  : isListening
+                    ? 'bg-white text-red-600 border-red-500 animate-pulse'
+                    : 'bg-red-500 text-white border-red-700 hover:scale-110 active:scale-95'
+              }
+            `}
+          >
+            {isListening ? <StopCircle size={64} /> : <Mic size={64} />}
+            <span className="text-sm font-black mt-2">
+              {isListening ? 'หยุดพูด' : 'พูด'}
+            </span>
+          </button>
+
+          {/* Send */}
+          <button
+            onClick={handleSubmit}
+            className={`
+              w-28 h-28 rounded-full flex flex-col items-center justify-center
+              shadow-2xl border-[6px] transition-all
+              ${
+                recognizedWords.length === 0
+                  ? 'bg-gray-100 border-gray-300 text-gray-400'
+                  : 'bg-green-500 border-green-700 text-white hover:scale-110 active:scale-95'
+              }
+            `}
+          >
+            <Send size={48} />
+            <span className="text-sm font-black mt-2">
+              ส่งคำตอบ
+            </span>
+          </button>
+
+
+        </div>
+
+          <p className="mt-2 text-gray-400 text-base">
+            หากนึกไม่ออก สามารถกดส่งคำตอบได้เลยครับ
+          </p>
+      </div>
 
     </div>
   );
 };
+
+const ListeningWave = () => (
+  <div className="flex items-center gap-1">
+    {[1, 2, 3].map(i => (
+      <span
+        key={i}
+        className="w-2 h-6 bg-red-500 rounded-full animate-wave"
+        style={{ animationDelay: `${i * 0.15}s` }}
+      />
+    ))}
+  </div>
+);
+
