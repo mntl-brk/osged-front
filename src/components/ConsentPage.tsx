@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FileText, Camera, Mic, Check, ArrowRight, Video, AlertCircle, PlayCircle, StopCircle, RefreshCcw } from 'lucide-react';
+import { stopAudio } from '@/lib/audioManager';
+import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 
 interface ConsentPageProps {
   onNext: () => void;
@@ -14,7 +16,19 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const hasSpoken = useRef(false)
+  const consentGuideText =
+    'สวัสดีครับ ต่อไปเป็นขั้นตอนการให้ความยินยอมในการเข้าร่วมการทดสอบนะครับ กรุณากดปุ่ม เริ่มอัดคลิป ก่อน เมื่อเริ่มอัดแล้ว ให้ค่อย ๆ อ่านเงื่อนไขการเก็บรวบรวมข้อมูล ในกรอบด้านบนออกเสียงให้ครบถ้วน เมื่ออ่านเสร็จแล้ว กดปุ่มหยุดบันทึก จากนั้น ติ๊กช่องยินยอมด้านล่าง ถ้าพร้อมแล้ว กดปุ่มถัดไป เพื่อดำเนินการต่อได้เลยครับ'
 
+  const { isSpeaking, replay } = useVoiceGuide(consentGuideText)
+
+  useEffect(() => {
+    return () => {
+      stopAudio()
+      stopCamera()
+    }
+  }, [])
+  
   useEffect(() => {
     startCamera();
     return () => {
@@ -39,10 +53,15 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
     }
   };
 
-  const handleStartRecording = () => {
+  const handleStartRecording = async () => {
+    if (!videoRef.current?.srcObject) {
+      await startCamera(); 
+    }
+
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       const mediaRecorder = new MediaRecorder(stream);
@@ -50,9 +69,7 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
       chunksRef.current = [];
 
       mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
+        if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
       mediaRecorder.start();
@@ -66,6 +83,7 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
       setIsRecording(false);
       setHasRecorded(true);
       // In a real app, you would process chunksRef.current here
+      stopCamera();
     }
   };
 
@@ -98,17 +116,18 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
                 เงื่อนไขการเก็บรวบรวมข้อมูล (Online Consent)
             </h3>
             
-            <div className="bg-white p-4 rounded-xl border border-gray-200 text-gray-600 text-base h-48 overflow-y-auto shadow-inner mb-2 leading-relaxed">
+            <div className="bg-white p-4 rounded-xl border border-gray-200 text-gray-600 text-base h-40 overflow-y-auto shadow-inner mb-2 leading-relaxed">
                 <p className="mb-2 font-medium text-gray-800">ข้าพเจ้ายินยอมให้โครงการ OSGED ดำเนินการดังนี้:</p>
                 <ul className="list-disc pl-5 space-y-2 mb-4">
                     <li>เก็บรวบรวมข้อมูลส่วนบุคคลทั่วไป (ที่อยู่, อายุ, เพศ)</li>
-                    <li><strong>บันทึกภาพและเสียงวิดีโอ (Video & Audio Recording)</strong> ตลอดการทำแบบทดสอบเพื่อนำไปวิเคราะห์ผลทางการแพทย์</li>
+                    <li><strong>บันทึกภาพและเสียงวิดีโอ </strong> ตลอดการทำแบบทดสอบเพื่อนำไปวิเคราะห์ผลทางการแพทย์</li>
                     <li>เก็บรวบรวมข้อมูลการตอบสนองและภาพวาดนาฬิกา</li>
                 </ul>
-                <p className="text-sm text-gray-500">
-                    ข้อมูลทั้งหมดจะถูกเก็บรักษาเป็นความลับและใช้เพื่อการวิจัยเท่านั้น ท่านสามารถยกเลิกการทำแบบทดสอบได้ตลอดเวลา
-                </p>
+               
             </div>
+             <p className="text-sm text-gray-500 mt-4  mx-4">
+                    ข้อมูลทั้งหมดจะถูกเก็บรักษาเป็นความลับและใช้เพื่อการวิจัยเท่านั้น ท่านสามารถยกเลิกการทำแบบทดสอบได้ตลอดเวลา
+            </p>
         </div>
 
         {/* 2. Video Recording / Device Check */}

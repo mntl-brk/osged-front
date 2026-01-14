@@ -1,39 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { Brain, ArrowRight } from 'lucide-react';
-import { speak } from '@/lib/tts_Chirp3';
-import { isAudioUnlocked } from '@/lib/audioUnlock';
-import { stopAudio } from '@/lib/audioManager';
-import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
+import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 
 interface IntroMiniCogPageProps {
   onStart: () => void;
 }
 
 export const IntroMiniCogPage: React.FC<IntroMiniCogPageProps> = ({ onStart }) => {
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const hasSpoken = useRef(false);
-
-  useEffect(() => {
-    if (!isAudioUnlocked()) return;
-    if (hasSpoken.current) return;
-
-    hasSpoken.current = true;
-    speakSequentialWithPreload(
-      'สวัสดีครับ... เริ่มจากส่วนแรกนี้ เราจะมาทดสอบความจำกัน มีด้วยกัน 3 ขั้นตอนนะครับ... ขั้นที่ 1... ให้ท่านตั้งใจฟัง และจำคำศัพท์ 3 คำ... ขั้นที่ 2... จะให้ท่านลองวาดรูปหน้าปัดนาฬิกา... และขั้นสุดท้าย... เราจะกลับมาทบทวนคำศัพท์ 3 คำนั้นกันอีกครั้งครับ... ไม่ต้องกังวลนะครับ ทำเท่าที่ทำได้... ถ้าพร้อมแล้ว กดปุ่มสีฟ้าด้านล่าง เพื่อเริ่มกันเลยครับ',
-      () => {
-        setIsSpeaking(false); 
-      },
-      () => {
-        setIsSpeaking(true);
-      }
-    );
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      stopAudio();
-    };
-  }, []);
+  const { status, isSpeaking } = useVoiceGuide(
+    'สวัสดีครับ ต่อไปจะเป็นการทดสอบความจำและการรู้คิดนะครับ แบบทดสอบนี้มีทั้งหมดสามขั้นตอน ขั้นแรก จะให้ฟังและจำคำศัพท์สามคำ ขั้นที่สอง จะให้วาดรูปหน้าปัดนาฬิกา และขั้นสุดท้าย จะกลับมาบอกคำศัพท์ที่จำไว้ ไม่ต้องกังวลนะครับ ทำเท่าที่ทำได้ ถ้าพร้อมแล้ว กดปุ่มด้านล่างเพื่อเริ่มได้เลยครับ'
+  )
 
 
   return (

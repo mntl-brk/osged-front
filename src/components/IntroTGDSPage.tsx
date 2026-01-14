@@ -1,8 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { Heart, ArrowRight } from 'lucide-react';
-import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
-import { isAudioUnlocked } from '@/lib/audioUnlock';
-import { stopAudio } from '@/lib/audioManager';
+import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 
 interface IntroTGDSPageProps {
   onStart: () => void;
@@ -10,20 +8,10 @@ interface IntroTGDSPageProps {
 
 export const IntroTGDSPage: React.FC<IntroTGDSPageProps> = ({ onStart }) => {
   const hasSpokenGuideRef = useRef(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
 
   /* ================= AI GUIDE ================= */
-  useEffect(() => {
-    if (!isAudioUnlocked()) return;
-    if (hasSpokenGuideRef.current) return;
-
-    hasSpokenGuideRef.current = true;
-
-    // 🔒 lock ก่อนพูด
-    setIsSpeaking(true);
-
-    speakSequentialWithPreload(
-      `
+   const { status, isSpeaking } = useVoiceGuide(
+        `
       ต่อไปนะครับ จะเป็นการประเมินความรู้สึกของท่าน
       เป็นคำถามสั้น ๆ เกี่ยวกับความรู้สึกในช่วงสัปดาห์ที่ผ่านมา
       ไม่มีคำตอบที่ถูกหรือผิดนะครับ
@@ -31,22 +19,8 @@ export const IntroTGDSPage: React.FC<IntroTGDSPageProps> = ({ onStart }) => {
       แล้วจึงตอบว่า ใช่ หรือ ไม่ใช่
       ตามความรู้สึกจริงของตัวเอง
       ถ้าพร้อมแล้ว กดปุ่มเริ่มตอบคำถามได้เลยครับ
-      `,
-      () => {
-        // 🔓 unlock หลังพูดจบ
-        setIsSpeaking(false);
-      },
-      () => {
-        // safety redundancy
-        setIsSpeaking(true);
-      }
-    );
-
-    return () => {
-      stopAudio();
-    };
-  }, []);
-
+      `
+    )
   /* ================= UI ================= */
   return (
     <div className="w-full max-w-3xl mx-auto px-6 py-12 animate-fade-in flex flex-col items-center justify-center min-h-[60vh] text-center">

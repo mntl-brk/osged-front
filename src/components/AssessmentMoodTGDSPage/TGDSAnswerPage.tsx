@@ -23,6 +23,7 @@ export const TGDSAnswerPage: React.FC<Props> = ({
 
   const recognitionRef = useRef<any>(null);
 
+  
   const createRecognition = () => {
     const SR =
       (window as any).SpeechRecognition ||
@@ -37,16 +38,24 @@ export const TGDSAnswerPage: React.FC<Props> = ({
       const transcript = e.results[0][0].transcript.trim();
       const t = transcript.toLowerCase();
 
+      
       setRawTranscript(transcript);
 
-      if (t.includes('ไม่') && !t.includes('ใช่')) {
+      if (t.includes('ไม่') || t.includes('ไม่ใช่') || t.includes('เปล่า') ||
+        t.includes('ไม่ได้') && !t.includes('ใช่')
+        ){
         rec.stop();
         setFinalAnswer(false);
         setHasDetectedAnswer(true);
         setIsListening(false);
       }
 
-      if (t.includes('ใช่') && !t.includes('ไม่')) {
+      if ( (t.includes('ใช่') ||
+            t.includes('ครับ') ||
+            t.includes('ค่ะ') ||
+            t.includes('ถูก')) &&
+            !t.includes('ไม่') 
+        ) {
         rec.stop();
         setFinalAnswer(true);
         setHasDetectedAnswer(true);

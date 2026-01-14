@@ -1,12 +1,17 @@
 import React from 'react';
 import { Clock, Volume2, Users, PauseCircle, Play } from 'lucide-react';
 import { unlockAudio } from '@/lib/audioUnlock';
+import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 
 interface InstructionPageProps {
   onStart: () => void;
 }
 
 export const InstructionPage: React.FC<InstructionPageProps> = ({ onStart }) => {
+const instructionGuideText =
+  'ก่อนเริ่มทำแบบคัดกรองนะครับ การประเมินนี้จะใช้เวลาประมาณ 5 ถึง 10 นาที แนะนำให้อยู่ในที่เงียบและมีแสงสว่างเพียงพอ หากมีผู้ดูแล สามารถช่วยอ่านคำสั่งให้ได้ ไม่ต้องกังวลนะครับ ทำตามความสามารถของท่านได้เลย เมื่อพร้อมแล้ว กรุณากดปุ่ม เริ่มทำแบบคัดกรอง ด้านล่าง เพื่อเริ่มต้นครับ'
+
+const { isSpeaking, replay } = useVoiceGuide(instructionGuideText)
   return (
     <div className="w-full max-w-3xl mx-auto px-6 py-24 animate-fade-in flex flex-col items-center pb-32">
       

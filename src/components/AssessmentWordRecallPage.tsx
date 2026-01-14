@@ -4,6 +4,7 @@ import { WordSet } from '../types';
 import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
 import { isAudioUnlocked } from '@/lib/audioUnlock';
 import { stopAudio } from '@/lib/audioManager';
+import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 
 interface AssessmentWordRecallPageProps {
   correctWordSet: WordSet;
@@ -19,25 +20,14 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
   const hasSpokenGuideRef = useRef(false);
 
   const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [recognizedWords, setRecognizedWords] = useState<string[]>([]);
   const [hasSpoken, setHasSpoken] = useState(false);
 
   /* ================= AI GUIDE ================= */
-  useEffect(() => {
-    if (!isAudioUnlocked()) return;
-    if (hasSpokenGuideRef.current) return;
+  const { status, isSpeaking, replay } = useVoiceGuide(
+      'ต่อไปนะครับ ขอให้พูดคำศัพท์ทั้งสามคำที่ขอให้จำไว้ก่อนหน้านี้ พูดทีละคำให้คำขึ้นก่อน แล้วค่อยพูดคำต่อไป ไม่ต้องรีบ เมื่อพร้อมแล้ว กดปุ่มไมค์สีแดงเพื่อเริ่มพูดครับ',
+  )
 
-    hasSpokenGuideRef.current = true;
-
-    speakSequentialWithPreload(
-      'ต่อไปนะครับ ขอให้พูดคำศัพท์ทั้งสามคำที่ขอให้จำไว้ก่อนหน้านี้ พูดทีละคำก็ได้ ไม่ต้องรีบ เมื่อพร้อมแล้ว กดปุ่มไมค์สีแดงเพื่อเริ่มพูดครับ',
-      () => setIsSpeaking(false),
-      () => setIsSpeaking(true)
-    );
-
-    return () => stopAudio();
-  }, []);
 
   /* ================= Speech Recognition ================= */
   useEffect(() => {
@@ -176,7 +166,7 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
             </div>
 
             {/* ===== Status ===== */}
-            <div className="h-4 flex items-center justify-center">
+            <div className="h-4 flex items-center justify-center text-center">
               {isSpeaking ? (
                 <span className="text-gray-500 text-lg font-semibold animate-pulse">
                    กำลังอธิบาย กรุณารอฟังให้จบ
@@ -190,7 +180,7 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
                 </div>
               ) : (
                 <span className="text-gray-400 text-lg italic">
-                  กดปุ่มไมค์ด้านล่างเพื่อเริ่มพูด
+                  "ให้พูดทีละคำ โดยให้คำที่พูดไปก่อนหน้าขึ้นก่อน แล้วค่อยพูดคำต่อไป"
                 </span>
               )}
             </div>

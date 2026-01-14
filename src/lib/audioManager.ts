@@ -1,71 +1,103 @@
-'use client';
+'use client'
 
-let currentAudio: HTMLAudioElement | null = null;
-let currentUrl: string | null = null;
+let currentAudio: HTMLAudioElement | null = null
+let currentUrl: string | null = null
 
-let isSpeaking = false;
+export type AudioStatus = 'idle' | 'preparing' | 'speaking'
 
-const listeners = new Set<(speaking: boolean) => void>();
+let audioStatus: AudioStatus = 'idle'
+let replayHandler: (() => void) | null = null
+
+const listeners = new Set<(status: AudioStatus) => void>()
 
 const notify = () => {
-  listeners.forEach(fn => fn(isSpeaking));
-};
+  listeners.forEach(fn => fn(audioStatus))
+}
 
-export const subscribeSpeaking = (fn: (speaking: boolean) => void) => {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
-};
+export const registerReplay = (fn: () => void) => {
+  replayHandler = fn
+}
+
+export const replayLast = () => {
+  replayHandler?.()
+}
+
+export const subscribeAudioStatus = (
+  fn: (status: AudioStatus) => void
+) => {
+  listeners.add(fn)
+  fn(audioStatus)
+  return () => listeners.delete(fn)
+}
+
+export const subscribeSpeaking = (
+  fn: (speaking: boolean) => void
+) =>
+  subscribeAudioStatus(status =>
+    fn(status === 'speaking')
+  )
+
+export const setAudioPreparing = () => {
+  audioStatus = 'preparing'
+  notify()
+}
+
+export const setAudioSpeaking = () => {
+  audioStatus = 'speaking'
+  notify()
+}
+
+export const setAudioIdle = () => {
+  audioStatus = 'idle'
+  notify()
+}
 
 export const playAudioBlob = (
   blob: Blob,
   onEnded?: () => void
 ) => {
   if (currentAudio) {
-    currentAudio.pause();
-    currentAudio.currentTime = 0;
+    currentAudio.pause()
+    currentAudio.currentTime = 0
   }
 
   if (currentUrl) {
-    URL.revokeObjectURL(currentUrl);
+    URL.revokeObjectURL(currentUrl)
   }
 
-  currentUrl = URL.createObjectURL(blob);
-  currentAudio = new Audio(currentUrl);
+  currentUrl = URL.createObjectURL(blob)
+  currentAudio = new Audio(currentUrl)
 
-  isSpeaking = true;
-  notify();
+  setAudioSpeaking()
 
   currentAudio.onended = () => {
-    isSpeaking = false;
-    notify();
-    onEnded?.();
-  };
+    setAudioIdle()
+    onEnded?.()
+  }
 
   currentAudio.onerror = () => {
-    isSpeaking = false;
-    notify();
-    onEnded?.();
-  };
+    setAudioIdle()
+    onEnded?.()
+  }
 
-  currentAudio.play();
-};
+  currentAudio.play()
+}
 
 export const stopAudio = () => {
   if (currentAudio) {
-    currentAudio.pause();
-    currentAudio.currentTime = 0;
+    currentAudio.pause()
+    currentAudio.currentTime = 0
   }
 
   if (currentUrl) {
-    URL.revokeObjectURL(currentUrl);
+    URL.revokeObjectURL(currentUrl)
   }
 
-  currentAudio = null;
-  currentUrl = null;
+  currentAudio = null
+  currentUrl = null
 
-  //  stop speaking
-  isSpeaking = false;
-  notify();
-};
+  setAudioIdle()
+}
 
-export const getIsSpeaking = () => isSpeaking;
+export const getIsSpeaking = () =>
+  audioStatus === 'speaking'

@@ -10,6 +10,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { Gender, Location, DemographicsData, EducationLevel } from '@/types';
+import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 
 
 interface DemographicsPageProps {
@@ -22,7 +23,11 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
   const [gender, setGender] = useState<Gender | null>(null);
   const [locationType, setLocationType] = useState<Location | null>(null);
   const [educationLevel, setEducationLevel] = useState<EducationLevel | null>(null);
+  const demographicsGuideText =
+    'ต่อไปเป็นหน้าข้อมูลพื้นฐานนะครับ หน้านี้จะมีทั้งหมด 5 ข้อ กรุณาค่อย ๆ ตอบทีละข้อ เริ่มจาก พิมพ์ว่าขณะนี้ท่านอยู่ที่ไหน จากนั้นกรอกอายุ เลือกระดับการศึกษา เลือกเพศ และเลือกประเภทสถานที่ที่ท่านอยู่ในปัจจุบัน หากกรอกข้อมูลครบแล้ว กรุณากดปุ่ม ไปหน้าถัดไป ด้านล่างได้เลยครับ'
 
+  const { isSpeaking, replay } = useVoiceGuide(demographicsGuideText)
+  
   const handleSubmit = () => {
     if (!locationDescription.trim() || !age || !gender || !locationType || !educationLevel) {
       alert('กรุณากรอกข้อมูลให้ครบทุกข้อ');

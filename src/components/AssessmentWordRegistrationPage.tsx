@@ -5,6 +5,7 @@ import { stopAudio } from '@/lib/audioManager';
 import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
 import { isAudioUnlocked } from '@/lib/audioUnlock';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 
 interface AssessmentWordRegistrationPageProps {
   wordSet: WordSet;
@@ -51,21 +52,15 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
   
   const [completeStatus, setCompleteStatus] = useState<CompleteStatus | null>(null);
 
-    useEffect(() => {
-      if (!isAudioUnlocked()) return;
-      if (hasSpoken.current) return;
-  
-      hasSpoken.current = true;
-      speakSequentialWithPreload(
+    const {
+      isSpeaking: isGuideSpeaking,
+    } = useVoiceGuide(
         'ต่อไปเป็นการจำคำศัพท์ ผมจะอ่านคำศัพท์สามคำให้ฟัง ขอให้ตั้งใจฟังและจำคำเหล่านั้นไว้นะครับ เมื่อพร้อมแล้ว กดปุ่มลำโพงได้เลยครับ',
-        () => {
-          setIsSpeaking(false); 
-        },
-        () => {
-          setIsSpeaking(true);
-        }
-      );
-    }, []);
+      {
+        autoPlay: true,
+        allowReplay: true,
+      }
+    )
   
     useEffect(() => {
       return () => {
@@ -196,24 +191,26 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
   const showPlayButton = !hasPlayedAudio;
   const showMicSection = hasPlayedAudio && !completed;
   const showNextButton = completed;
-    
+  const textshowMicSection = 'ขอให้พูดคำศัพท์ทั้งสามคำที่ได้ยินเมื่อครู่นี้นะครับ พูดทีละคำ ให้คำที่พูดไปก่อนหน้าขึ้นก่อน แล้วค่อยพูดคำต่อไป ไม่ต้องรีบ เมื่อพร้อมแล้ว กดปุ่มเพื่อเริ่มพูดได้เลยครับ';
+  const hasPlayedMicGuide = useRef(false);
+
+  const {
+    isSpeaking: isMicGuideSpeaking,
+  } = useVoiceGuide(
+    textshowMicSection,
+    {
+      autoPlay: showMicSection && !hasPlayedMicGuide.current,
+      allowReplay: false,
+    }
+  );
+
   useEffect(() => {
-      if (!showMicSection) return;
-      if (!isAudioUnlocked()) return;
-      if (hasSpokenMicGuide.current) return;
+    if (showMicSection) {
+      hasPlayedMicGuide.current = true;
+    }
+  }, [showMicSection]);
 
-      hasSpokenMicGuide.current = true;
-
-      speakSequentialWithPreload(
-        'ขอให้พูดคำศัพท์ทั้งสามคำที่ได้ยินเมื่อครู่นี้นะครับ พูดทีละคำก็ได้ ไม่ต้องรีบ เมื่อพร้อมแล้ว กดปุ่มเพื่อเริ่มพูดได้เลยครับ',
-        () => {
-          setIsSpeaking(false);
-        },
-        () => {
-          setIsSpeaking(true);
-        }
-      );
-   }, [showMicSection]);
+   
 
   const getDisplayWords = () => {
     return showMicSection ? recognizedWords : Array(3).fill('???');
@@ -377,7 +374,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
             </div>
 
             {/* ===== Status ===== */}
-            <div className="h-4 flex items-center justify-center">
+            <div className="h-4 flex items-center justify-center text-center">
               {isSpeaking ? (
                 <span className="text-gray-500 text-lg font-semibold animate-pulse">
                    กำลังอธิบาย กรุณารอฟังให้จบ
@@ -391,7 +388,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
                 </div>
               ) : (
                 <span className="text-gray-400 text-lg italic">
-                  กดปุ่มไมค์ด้านล่างเพื่อเริ่มพูด
+                  "ให้พูดทีละคำ โดยให้คำที่พูดไปก่อนหน้าขึ้นก่อน แล้วค่อยพูดคำต่อไป"
                 </span>
               )}
             </div>
@@ -442,7 +439,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
 
             </div>
               <p className="text-gray-400 text-base">
-                      หากนึกไม่ออก สามารถกดส่งคำตอบได้เลยครับ
+                  หากนึกไม่ออก สามารถกดส่งคำตอบได้เลยครับ
               </p>
           </div>
         )}

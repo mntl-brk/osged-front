@@ -4,6 +4,7 @@ import { TGDS_QUESTIONS } from '@/data/tgdsQuestions';
 import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
 import { isAudioUnlocked } from '@/lib/audioUnlock';
 import { stopAudio } from '@/lib/audioManager';
+import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 interface AssessmentMoodTGDSPageProps {
   onComplete: (score: number) => void;
 }
@@ -23,8 +24,6 @@ export const AssessmentMoodTGDSPage: React.FC<AssessmentMoodTGDSPageProps> = ({ 
   const recognitionRef = useRef<any>(null);
   const phaseRef = useRef<AssessmentPhase>(phase);
 
-  const [isSpeaking, setIsSpeaking] = useState(false);
-
    // Reset transcript and state when index or phase changes
   useEffect(() => {
     recognitionRef.current?.abort();
@@ -39,37 +38,6 @@ export const AssessmentMoodTGDSPage: React.FC<AssessmentMoodTGDSPageProps> = ({ 
     phaseRef.current = phase;
   }, [phase]);
       
-  useEffect(() => {
-      if (!isAudioUnlocked()) return;
-      if (hasSpokenGuideRef.current) return;
-
-      hasSpokenGuideRef.current = true;
-
-      speakSequentialWithPreload(
-        `
-        ต่อไปนะครับ จะเป็นคำถามเกี่ยวกับความรู้สึกของท่าน
-        ในช่วงประมาณหนึ่งสัปดาห์ที่ผ่านมาครับ
-
-        คำถามแต่ละข้อเป็นคำถามสั้น ๆ
-        ไม่มีคำตอบที่ถูกหรือผิดนะครับ
-
-        ขอให้ท่านตอบตามความรู้สึกจริงของตัวเอง
-        ไม่ต้องคิดนาน ไม่ต้องกังวล
-
-        ในแต่ละข้อ
-        ตอบว่า “ใช่” หรือ “ไม่ใช่” ก็พอครับ
-
-        ถ้าพร้อมแล้ว
-        กดปุ่มเริ่มตอบคำถามได้เลยครับ
-        `,
-        () => setIsSpeaking(false),
-        () => setIsSpeaking(true)
-      );
-
-      return () => {
-        stopAudio();
-      };
-    }, []);
 
     const createRecognition = () => {
       const SR =
@@ -90,12 +58,16 @@ export const AssessmentMoodTGDSPage: React.FC<AssessmentMoodTGDSPageProps> = ({ 
         setRecordedText(transcript);
 
         const t = transcript.toLowerCase();
-        const isYes = t.includes('ใช่') && !t.includes('ไม่');
-        const isNo = t.includes('ไม่') && !t.includes('ใช่');
+        const isNo =
+          t.includes('ไม่ใช่') ||
+          (t.includes('ไม่') && !t.includes('ใช่'));
+
+        const isYes =
+          t.includes('ใช่') &&
+          !t.includes('ไม่');
 
         if (isYes || isNo) {
-          recognition.stop();
-          setIsListening(false);
+         
           setHasDetectedAnswer(true);
         }
       };
@@ -112,18 +84,15 @@ const toggleListening = () => {
   // ======================
   if (phase === 'READING') {
     if (!isListening) {
-      // ▶️ เริ่มอัดเสียงอ่าน
       recognitionRef.current?.abort();
       recognitionRef.current = createRecognition();
       recognitionRef.current.start();
 
       setIsListening(true);
     } else {
-      // ⏹️ หยุดอ่าน → ไป ANSWERING
       recognitionRef.current?.stop();
       setIsListening(false);
 
-      // ⭐ สำคัญ: เปลี่ยน phase ตอน "กดเมื่อพูดจบ"
       setPhase('ANSWERING');
     }
     return;
@@ -174,10 +143,18 @@ const toggleListening = () => {
         return;
     }
 
-    // Comprehensive Thai "No" checks
-    const isNo = t.includes('ไม่') || t.includes('เปล่า') || t.includes('ไม่ได้');
-    // Comprehensive Thai "Yes" checks
-    const isYes = (t.includes('ใช่') || t.includes('ครับ') || t.includes('ค่ะ') || t.includes('ถูก')) && !t.includes('ไม่');
+    const isNo =
+      t.includes('ไม่ใช่') ||
+      t.includes('ไม่') ||
+      t.includes('เปล่า') ||
+      t.includes('ไม่ได้');
+
+    const isYes =
+      (t.includes('ใช่') ||
+      t.includes('ครับ') ||
+      t.includes('ค่ะ') ||
+      t.includes('ถูก')) &&
+      !t.includes('ไม่');
 
     if (isNo) {
         saveAnswerAndMove(false);

@@ -4,6 +4,7 @@ import { AssessmentProgress } from './AssessmentProgress';
 import { isAudioUnlocked } from '@/lib/audioUnlock';
 import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
 import { stopAudio } from '@/lib/audioManager';
+import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 
 interface AssessmentClockDrawingPageProps {
   onNext: (data: string) => void;
@@ -44,33 +45,10 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
   const [minuteHand, setMinuteHand] = useState<ClockHand>({ type: 'minute', angle: 0, isPlaced: false });
   const [draggingId, setDraggingId] = useState<number | 'hour' | 'minute' | null>(null);
   const hasSpoken = useRef(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   
-
-   useEffect(() => {
-        if (!isAudioUnlocked()) return;
-        if (hasSpoken.current) return;
-    
-        hasSpoken.current = true;
-
-        setIsSpeaking(true);
-
-        speakSequentialWithPreload(
-          'ต่อไปจะเป็นการสร้างนาฬิกานะครับ กรุณาลากตัวเลขและเข็มนาฬิกา ทางกล่องด้านขวามือของหน้าจอ เพื่อบอกเวลา สิบเอ็ดนาฬิกา สิบ นาที ค่อย ๆ ทำ ไม่ต้องรีบครับ',
-          () => {
-            setIsSpeaking(false); 
-          },
-          () => {
-            setIsSpeaking(true);
-          }
-        );
-      }, []);
-    
-      useEffect(() => {
-        return () => {
-          stopAudio();
-        };
-  }, []);
+  const { status, isSpeaking, replay } = useVoiceGuide(
+    'ต่อไปจะเป็นการสร้างนาฬิกานะครับ กรุณาลากตัวเลขและเข็มนาฬิกา ทางกล่องด้านขวามือของหน้าจอ เพื่อบอกเวลา สิบเอ็ดนาฬิกา สิบ นาที ค่อย ๆ ทำ ไม่ต้องรีบครับ',
+  )
 
   const pushHistory = () => {
     historyRef.current.push({
