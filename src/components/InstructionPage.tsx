@@ -71,9 +71,6 @@ const { isSpeaking, replay } = useVoiceGuide(instructionGuideText)
       {/* CTA Button */}
       <button 
          onClick={async () => {
-          console.log('clicked');
-          await unlockAudio().catch(e => console.log('unlock error', e));
-          console.log('after unlock');
           onStart();
         }}
                 

@@ -6,7 +6,7 @@ import {
   registerReplay,
   setAudioIdle,
 } from '@/lib/audioManager'
-import { isAudioUnlocked } from '@/lib/audioUnlock'
+import { isAudioUnlocked, unlockAudio } from '@/lib/audioUnlock'
 
 export type VoiceGuideStatus = 'idle' | 'preparing' | 'speaking'
 
@@ -44,11 +44,15 @@ export const useVoiceGuide = (
     )
   }
 
-  const replay = () => {
+  const replay = async () => {
     if (!allowReplay) return
-    play()
-  }
 
+    if (!isAudioUnlocked()) {
+        await unlockAudio()
+    }
+
+    play()
+}
   useEffect(() => {
     if (!autoPlay) return
     if (hasPlayed.current) return

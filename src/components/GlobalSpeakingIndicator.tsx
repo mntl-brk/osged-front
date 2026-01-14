@@ -6,18 +6,25 @@ import {
   subscribeAudioStatus,
   replayLast,
 } from '@/lib/audioManager'
+import { useVoiceGuideControl } from '@/contexts/VoiceGuideContext'
 
 export const GlobalSpeakingIndicator = () => {
+  const { canReplay, ready } = useVoiceGuideControl()
+
   const [status, setStatus] = useState<
     'idle' | 'preparing' | 'speaking'
   >('idle')
 
   useEffect(() => {
+    if (!ready || !canReplay) return
+
     const unsubscribe = subscribeAudioStatus(setStatus)
     return () => {
       unsubscribe()
     }
-  }, [])
+  }, [ready, canReplay])
+
+  if (!ready || !canReplay) return null
 
   if (status === 'idle') {
     return (
@@ -31,7 +38,7 @@ export const GlobalSpeakingIndicator = () => {
           shadow-lg hover:bg-primary
         "
       >
-       <PlayCircle size={28} />
+        <PlayCircle size={28} />
         ฟังคำแนะนำ
       </button>
     )

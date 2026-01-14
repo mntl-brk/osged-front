@@ -1,12 +1,30 @@
-export const splitTextIntoChunks = (text: string): string[] => {
-  const sentences = text
-    .split(/(\.\.\.|ขั้นที่\s*\d+|และขั้นสุดท้าย)/)
-    .reduce((acc: string[], curr) => {
-      if (!curr.trim()) return acc;
-      if (acc.length === 0) return [curr.trim()];
-      acc[acc.length - 1] += curr;
-      return acc;
-    }, []);
+export const splitTextIntoChunks = (
+  text: string,
+  maxLength = 90
+): string[] => {
+  // 1. แยกตามจุดหยุดธรรมชาติ
+  const rawParts = text
+    .replace(/\s+/g, ' ')
+    .split(/(?<=[.!?…])|(?<=\.\.\.)|(?<=ครับ)|(?<=ค่ะ)/);
 
-  return sentences.map(s => s.trim()).filter(Boolean);
+  const chunks: string[] = [];
+  let buffer = '';
+
+  for (const part of rawParts) {
+    const p = part.trim();
+    if (!p) continue;
+
+    // ถ้า buffer ยังไม่ยาวเกิน → ต่อ
+    if ((buffer + ' ' + p).length <= maxLength) {
+      buffer = buffer ? `${buffer} ${p}` : p;
+    } else {
+      // ดัน buffer เก่าออก
+      if (buffer) chunks.push(buffer);
+      buffer = p;
+    }
+  }
+
+  if (buffer) chunks.push(buffer);
+
+  return chunks;
 };

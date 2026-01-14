@@ -6,11 +6,19 @@ import { InfoSection } from '@/components/InfoSection'
 import { Footer } from '@/components/Footer'
 import { useRouter } from 'next/navigation'
 import { useAssessmentStore } from '@/store/assessmentStore'
+import { useVoiceGuideControl } from '@/contexts/VoiceGuideContext'
+import { useEffect } from 'react'
 
 export default function HomePage() {
   const router = useRouter()
   const setModalContent = useAssessmentStore((s) => s.setModalContent)
+  const { setCanReplay } = useVoiceGuideControl()
 
+  useEffect(() => {
+    setCanReplay(false)     
+    return () => setCanReplay(true)
+  }, [])
+  
   return (
     <AppShell>
       <Hero

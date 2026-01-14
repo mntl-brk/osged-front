@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, ArrowRight } from 'lucide-react';
+import { unlockAudio } from '@/lib/audioUnlock';
 
 interface VerificationPageProps {
   onSubmit: (code: string) => void;
@@ -49,7 +50,11 @@ export const VerificationPage: React.FC<VerificationPageProps> = ({ onSubmit }) 
       </div>
 
       <button 
-        onClick={handleContinue}
+           onClick={async () => {
+                  await unlockAudio().catch(e => console.log('unlock error', e));
+                  handleContinue();
+            }}
+                     
         className="
           w-full max-w-sm
           bg-primary hover:bg-primaryHover text-white 

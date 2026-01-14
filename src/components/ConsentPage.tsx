@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FileText, Camera, Mic, Check, ArrowRight, Video, AlertCircle, PlayCircle, StopCircle, RefreshCcw } from 'lucide-react';
 import { stopAudio } from '@/lib/audioManager';
 import { useVoiceGuide } from '@/hooks/useVoiceGuide';
+import { useCameraRecorder } from '@/hooks/useCameraRecorder';
 
 interface ConsentPageProps {
   onNext: () => void;
@@ -9,83 +10,31 @@ interface ConsentPageProps {
 
 export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
   const [consent, setConsent] = useState(false);
-  const [hasRecorded, setHasRecorded] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [cameraError, setCameraError] = useState(false);
-  
-  const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const hasSpoken = useRef(false)
   const consentGuideText =
-    'สวัสดีครับ ต่อไปเป็นขั้นตอนการให้ความยินยอมในการเข้าร่วมการทดสอบนะครับ กรุณากดปุ่ม เริ่มอัดคลิป ก่อน เมื่อเริ่มอัดแล้ว ให้ค่อย ๆ อ่านเงื่อนไขการเก็บรวบรวมข้อมูล ในกรอบด้านบนออกเสียงให้ครบถ้วน เมื่ออ่านเสร็จแล้ว กดปุ่มหยุดบันทึก จากนั้น ติ๊กช่องยินยอมด้านล่าง ถ้าพร้อมแล้ว กดปุ่มถัดไป เพื่อดำเนินการต่อได้เลยครับ'
+    'สวัสดีครับ ต่อไปเป็นขั้นตอนการให้ความยินยอมในการเข้าร่วมการทดสอบนะครับ กรุณากดปุ่ม เริ่มอัดคลิป ก่อน เมื่อเริ่มอัดแล้ว ให้ค่อย ๆ อ่านเงื่อนไขการเก็บรวบรวมข้อมูล ในกรอบด้านบนออกเสียงให้ครบถ้วน เมื่ออ่านเสร็จแล้ว กดปุ่มหยุดบันทึก จากนั้น ติ๊กช่องยินยอมด้านล่าง แล้วกดปุ่มถัดไปได้เลยครับ'
 
   const { isSpeaking, replay } = useVoiceGuide(consentGuideText)
 
-  useEffect(() => {
-    return () => {
-      stopAudio()
-      stopCamera()
-    }
-  }, [])
-  
+  const {
+    videoRef,
+    isRecording,
+    hasRecorded,
+    cameraError,
+    startCamera,
+    startRecording,
+    stopRecording,
+  } = useCameraRecorder()
+
   useEffect(() => {
     startCamera();
     return () => {
-      stopCamera();
+      stopRecording();
     };
   }, []);
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      setCameraError(false);
-    } catch (err) {
-      console.error("Error accessing camera:", err);
-      setCameraError(true);
-    }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-  };
-
-  const handleStartRecording = async () => {
-    if (!videoRef.current?.srcObject) {
-      await startCamera(); 
-    }
-
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-    }
-  };
-
-  const handleStopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      setHasRecorded(true);
-      // In a real app, you would process chunksRef.current here
-      stopCamera();
-    }
-  };
 
   const handleSubmit = () => {
     if (!consent) {
@@ -182,7 +131,7 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
                     <div className="flex gap-4">
                         {!isRecording ? (
                             <button
-                                onClick={handleStartRecording}
+                                onClick={startRecording}
                                 className={`
                                     flex items-center gap-2 px-6 py-3 rounded-full font-bold text-lg shadow-md transition-all
                                     ${hasRecorded 
@@ -194,7 +143,7 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
                             </button>
                         ) : (
                             <button
-                                onClick={handleStopRecording}
+                                onClick={stopRecording}
                                 className="flex items-center gap-2 px-6 py-3 rounded-full font-bold text-lg shadow-md bg-gray-800 text-white hover:bg-gray-900 scale-105"
                             >
                                 <StopCircle size={20} /> หยุดบันทึก
