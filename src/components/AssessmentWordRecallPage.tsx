@@ -5,6 +5,7 @@ import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
 import { isAudioUnlocked } from '@/lib/audioUnlock';
 import { stopAudio } from '@/lib/audioManager';
 import { useVoiceGuide } from '@/hooks/useVoiceGuide';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 
 interface AssessmentWordRecallPageProps {
   correctWordSet: WordSet;
@@ -18,78 +19,30 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
   const recognitionRef = useRef<any>(null);
   const transcriptBufferRef = useRef('');
   const hasSpokenGuideRef = useRef(false);
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
-  const [isListening, setIsListening] = useState(false);
-  const [recognizedWords, setRecognizedWords] = useState<string[]>([]);
   const [hasSpoken, setHasSpoken] = useState(false);
 
   /* ================= AI GUIDE ================= */
   const { status, isSpeaking, replay } = useVoiceGuide(
-      'ต่อไปนะครับ ขอให้พูดคำศัพท์ทั้งสามคำที่ขอให้จำไว้ก่อนหน้านี้ พูดทีละคำให้คำขึ้นก่อน แล้วค่อยพูดคำต่อไป ไม่ต้องรีบ เมื่อพร้อมแล้ว กดปุ่มไมค์สีแดงเพื่อเริ่มพูดครับ',
+      `ต่อไปนะครับ ขอให้พูดคำศัพท์ทั้งสามคำที่จำไว้ก่อนหน้านี้
+        พูดต่อเนื่องกันได้เลย ไม่ต้องรีบนะครับ
+        เมื่อพร้อมแล้ว กดปุ่มไมค์สีแดงเพื่อเริ่มพูดครับ`,
   )
 
 
   /* ================= Speech Recognition ================= */
-  useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) return;
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'th-TH';
-    recognition.continuous = true;
-    recognition.interimResults = false;
-
-    recognition.onresult = (event: any) => {
-      let newText = '';
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          newText += event.results[i][0].transcript + ' ';
-        }
-      }
-
-      if (!newText) return;
-
-      transcriptBufferRef.current += newText;
-
-      const words = transcriptBufferRef.current
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 3);
-
-      setRecognizedWords(words);
-      setHasSpoken(true);
-    };
-
-    recognition.onend = () => setIsListening(false);
-    recognitionRef.current = recognition;
-
-    return () => recognition.abort();
-  }, []);
-
-  /* ================= Actions ================= */
-  const toggleListening = () => {
-    if (isSpeaking) return;
-
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-    } else {
-      recognitionRef.current?.start();
-      setIsListening(true);
-    }
-  };
-
-  const handleUndoLastWord = () => {
-    if (recognizedWords.length === 0) return;
-    const updated = recognizedWords.slice(0, -1);
-    setRecognizedWords(updated);
-    transcriptBufferRef.current = updated.join(' ');
-  };
+  const {
+    isListening,
+    transcript,
+    words: recognizedWords,
+    start,
+    stop,
+    reset,
+  } = useSpeechRecognition({
+    lang: 'th-TH',
+    maxWords: 3,
+  });
 
   const calculateScore = () => {
     const targets = correctWordSet.words.map(w => w.trim());
@@ -97,7 +50,15 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
   };
 
   const handleSubmit = () => {
-    if (isListening) recognitionRef.current?.stop();
+    setIsEvaluating(false);
+
+    if (!transcript.trim()) {
+      alert("กรุณาพูดคำอย่างน้อย 1 คำครับ");
+      return;
+    }
+
+    if (isListening) stop();
+
     onNext(calculateScore(), recognizedWords);
   };
 
@@ -106,6 +67,7 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
     recognizedWords[1] || '',
     recognizedWords[2] || '',
   ];
+  
 
   /* ================= UI ================= */
   return (
@@ -115,141 +77,111 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
         พูดคำทั้ง 3 คำที่ขอให้จำก่อนหน้านี้
       </h1>
 
-      {/* Word Slots */}
-        <div className="flex justify-center gap-6">
-          {[0, 1, 2].map(i => (
-            <div
-              key={i}
-              className={`
-                w-40 h-24 rounded-2xl border-4
-                flex flex-col items-center justify-center
-                transition-all
-                ${
-                  displayWords[i]
-                    ? 'bg-blue-50 border-primary text-primary shadow-lg scale-105'
-                    : 'bg-gray-50 border-gray-200 text-gray-400'
-                }
-              `}
-            >
-              <span className="text-base font-semibold opacity-70">
-                คำที่ {i + 1}
-              </span>
-              <span className="text-4xl font-black">
-                {displayWords[i] || '...'}
-              </span>
-            </div>
-          ))}
-        </div>
 
       {/* ================= Interaction Panel ================= */}
-      <div
+     <div
         className="
-          w-full max-w-3xl
+          w-full max-w-md
           bg-white
           border-4 border-primary/20
-          rounded-[48px]
-          shadow-2xl
-          px-10 py-12
-          mt-6
-          flex flex-col items-center gap-10
+          rounded-[32px]
+          shadow-xl
+          px-6 py-8
+          mt-2
+          flex flex-col items-center gap-4
         "
       >
-
+    
         {/* Status */}
-        <div className="text-center space-y-2">
 
-               <div className={`${isSpeaking ? 'opacity-30 blur-sm' : ''} transition-all`}>
-                <p className="text-xl text-gray-500">
-                  คุณพูดได้ <span className="font-bold">{recognizedWords.length}</span> จาก 3 คำ
-                </p>
+        {isEvaluating && (
+            <div className="mt-4 flex items-center justify-center gap-2 text-green-600">
+              <span className="text-lg font-medium">
+                กำลังตรวจสอบให้ครับ
+              </span>
+              <div className="flex gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" />
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce delay-150" />
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce delay-300" />
               </div>
             </div>
+          )}
 
-            {/* ===== Status ===== */}
-            <div className="h-4 flex items-center justify-center text-center">
-              {isSpeaking ? (
-                <span className="text-gray-500 text-lg font-semibold animate-pulse">
-                   กำลังอธิบาย กรุณารอฟังให้จบ
-                </span>
-              ) : isListening ? (
-                <div className="flex items-center gap-4 bg-red-50 px-8 py-3 rounded-full border-2 border-red-200">
-                  <ListeningWave />
-                  <span className="text-red-600 font-bold text-xl">
-                    กำลังฟังอยู่...
-                  </span>
-                </div>
-              ) : (
-                <span className="text-gray-400 text-lg italic">
-                  "ให้พูดทีละคำ โดยให้คำที่พูดไปก่อนหน้าขึ้นก่อน แล้วค่อยพูดคำต่อไป"
-                </span>
-              )}
+        {transcript && (
+            <div
+              className="
+                mt-2 mb-2 px-6 py-3
+                bg-gray-50 border-2 border-gray-200
+                rounded-2xl text-center
+                animate-fade-in
+              "
+            >
+              <p className="text-lg text-gray-500">
+                ได้ยินว่า:
+              </p>
+              <p className="text-2xl font-semibold text-gray-800 mt-1">
+                {transcript}
+              </p>
             </div>
+          )}
+
+        <div className="text-center space-y-2  flex items-center justify-center">
+          {isSpeaking ? (
+            <p className="text-gray-400 animate-pulse font-semibold">
+              กำลังอธิบาย กรุณารอฟัง
+            </p>
+          ) : isListening ? (
+            <div className="flex items-center gap-3 bg-red-50 px-6 py-2 rounded-full border-2 border-red-200">
+              <ListeningWave />
+              <span className="text-red-600 font-bold text-lg">
+                กำลังฟังอยู่
+              </span>
+            </div>
+          ) : !isEvaluating ? (
+            <p className="text-gray-400 italic text-sm px-4">
+              กดปุ่มแล้วพูดคำศัพท์ทั้ง 3 คำ ต่อเนื่องได้เลยครับ
+            </p>
+          ) : null}
+        </div>
 
         {/* Actions */}
         <div className="flex items-center justify-center gap-12">
 
-          {/* Undo */}
-          <button
-            onClick={handleUndoLastWord}
-            disabled={recognizedWords.length === 0}
-            className={`
-              w-20 h-20 rounded-full
-              flex items-center justify-center
-              shadow-md transition-all
-              ${
-                recognizedWords.length === 0
-                  ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
-                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-              }
-            `}
-          >
-            <RotateCcw size={28} />
-          </button>
-
           {/* Mic */}
-          <button
-            onClick={toggleListening}
-            disabled={isSpeaking}
-            className={`
-              w-36 h-36 rounded-full flex flex-col items-center justify-center
-              shadow-2xl border-[6px] transition-all
-              ${
-                isSpeaking
-                  ? 'bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed'
-                  : isListening
-                    ? 'bg-white text-red-600 border-red-500 animate-pulse'
-                    : 'bg-red-500 text-white border-red-700 hover:scale-110 active:scale-95'
-              }
-            `}
-          >
-            {isListening ? <StopCircle size={64} /> : <Mic size={64} />}
-            <span className="text-sm font-black mt-2">
-              {isListening ? 'หยุดพูด' : 'พูด'}
-            </span>
-          </button>
-
+             <button
+                onClick={() => {
+                  if (isListening) {
+                    setIsEvaluating(true);
+                    stop();   
+                    setTimeout(handleSubmit, 2000); 
+    
+                  } else {
+                    reset();     
+                    start();    
+                  }
+                }}
+                disabled={isSpeaking}
+                className={`
+                  w-40 h-40 rounded-full
+                  flex flex-col items-center justify-center
+                  shadow-2xl transition-all
+                  ${
+                    isSpeaking
+                      ? 'bg-gray-200 text-gray-400'
+                      : isListening
+                        ? 'bg-red-600 text-white animate-pulse'
+                        : 'bg-red-500 text-white hover:scale-105 active:scale-95'
+                  }
+                `}
+              >
+                {isListening ? <StopCircle size={72} /> : <Mic size={72} />}
+                <span className="mt-3 text-lg font-black">
+                  {isListening ? 'กดเมื่อพูดครบแล้ว' : 'กดเพื่อพูด'}
+                </span>
+              </button>
           {/* Send */}
-          <button
-            onClick={handleSubmit}
-            className={`
-              w-28 h-28 rounded-full flex flex-col items-center justify-center
-              shadow-2xl border-[6px] transition-all
-              ${
-                recognizedWords.length === 0
-                  ? 'bg-gray-100 border-gray-300 text-gray-400'
-                  : 'bg-green-500 border-green-700 text-white hover:scale-110 active:scale-95'
-              }
-            `}
-          >
-            <Send size={48} />
-            <span className="text-sm font-black mt-2">
-              ส่งคำตอบ
-            </span>
-          </button>
-
-
+          
         </div>
-
           <p className="mt-2 text-gray-400 text-base">
             หากนึกไม่ออก สามารถกดส่งคำตอบได้เลยครับ
           </p>

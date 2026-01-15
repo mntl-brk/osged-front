@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TGDS_QUESTIONS } from '@/data/tgdsQuestions';
 import { TGDSReadingPage } from './TGDSReadingPage';
 import { TGDSAnswerPage } from './TGDSAnswerPage';
+import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 
 interface Props {
   onComplete: (score: number) => void;
@@ -10,7 +11,6 @@ interface Props {
 export const AssessmentMoodTGDSPage: React.FC<Props> = ({ onComplete }) => {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<boolean[]>([]);
-  const [step, setStep] = useState<'READ' | 'ANSWER'>('READ');
 
   const question = TGDS_QUESTIONS[currentIdx];
   const progressPercent = ((currentIdx + 1) / TGDS_QUESTIONS.length) * 100;
@@ -21,7 +21,6 @@ export const AssessmentMoodTGDSPage: React.FC<Props> = ({ onComplete }) => {
 
     if (currentIdx < TGDS_QUESTIONS.length - 1) {
       setCurrentIdx(i => i + 1);
-      setStep('READ');
     } else {
       let score = 0;
       nextAnswers.forEach((ans, i) => {
@@ -30,28 +29,25 @@ export const AssessmentMoodTGDSPage: React.FC<Props> = ({ onComplete }) => {
       onComplete(score);
     }
   };
+   
+  useVoiceGuide(
+    `
+    เมื่อพร้อมแล้วคุณสามารถกดปุ่มพูด
+    อ่านคำถามแล้วตอบว่า “ใช่” หรือ “ไม่ใช่” ได้เลยครับ
+    `,
+    {
+      autoPlay: currentIdx === 0,
+      allowReplay: false,
+    }
+  );
 
   return (
-    <>
-      {step === 'READ' && (
-        <TGDSReadingPage
-          question={question.text}
-          index={currentIdx}
-          total={TGDS_QUESTIONS.length}
-          progressPercent={progressPercent}
-          onDone={() => setStep('ANSWER')}
-        />
-      )}
-
-      {step === 'ANSWER' && (
-        <TGDSAnswerPage
-          question={question.text}
-          index={currentIdx}
-          total={TGDS_QUESTIONS.length}
-          progressPercent={progressPercent}
-          onAnswer={handleAnswer}
-        />
-      )}
-    </>
+    <TGDSAnswerPage
+      question={question.text}
+      index={currentIdx}
+      total={TGDS_QUESTIONS.length}
+      progressPercent={progressPercent}
+      onAnswer={handleAnswer}
+    />
   );
 };

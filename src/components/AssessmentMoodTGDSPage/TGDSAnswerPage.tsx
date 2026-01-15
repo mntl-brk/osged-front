@@ -17,13 +17,54 @@ export const TGDSAnswerPage: React.FC<Props> = ({
   onAnswer,
 }) => {
   const [isListening, setIsListening] = useState(false);
-  const [rawTranscript, setRawTranscript] = useState('');
   const [hasDetectedAnswer, setHasDetectedAnswer] = useState(false);
   const [finalAnswer, setFinalAnswer] = useState<boolean | null>(null);
 
   const recognitionRef = useRef<any>(null);
 
-  
+  /* ================= Answer Detection ================= */
+
+  useEffect(() => {
+    recognitionRef.current?.abort();
+    recognitionRef.current = null;
+
+    setFinalAnswer(null);
+    setHasDetectedAnswer(false);
+    setIsListening(false);
+  }, [question]);
+
+ const detectAnswerWithQuestion = (
+      transcript: string,
+      questionText: string
+    ): boolean | null => {
+
+      const normalize = (s: string) =>
+        s
+          .toLowerCase()
+          .replace(/\s+/g, '')
+          .replace(/[.,!?]/g, '');
+
+      const t = normalize(transcript);
+      const q = normalize(questionText);
+
+      const remaining = t.replace(q, '');
+
+      if (!remaining) return null;
+
+      const NEGATIVE = ['ไม่ใช่', 'ไม่เลย', 'เปล่า', 'ไม่ได้'];
+      for (const w of NEGATIVE) {
+        if (remaining.includes(w)) return false;
+      }
+
+      const POSITIVE = ['ใช่', 'ถูก'];
+      for (const w of POSITIVE) {
+        if (remaining.includes(w)) return true;
+      }
+
+      return null;
+    };
+  /* ================= Speech Recognition ================= */
+
   const createRecognition = () => {
     const SR =
       (window as any).SpeechRecognition ||
@@ -36,28 +77,14 @@ export const TGDSAnswerPage: React.FC<Props> = ({
 
     rec.onresult = (e: any) => {
       const transcript = e.results[0][0].transcript.trim();
-      const t = transcript.toLowerCase();
+      const detected = detectAnswerWithQuestion(
+          transcript,
+          question
+        );
 
-      
-      setRawTranscript(transcript);
-
-      if (t.includes('ไม่') || t.includes('ไม่ใช่') || t.includes('เปล่า') ||
-        t.includes('ไม่ได้') && !t.includes('ใช่')
-        ){
+      if (detected !== null) {
         rec.stop();
-        setFinalAnswer(false);
-        setHasDetectedAnswer(true);
-        setIsListening(false);
-      }
-
-      if ( (t.includes('ใช่') ||
-            t.includes('ครับ') ||
-            t.includes('ค่ะ') ||
-            t.includes('ถูก')) &&
-            !t.includes('ไม่') 
-        ) {
-        rec.stop();
-        setFinalAnswer(true);
+        setFinalAnswer(detected);
         setHasDetectedAnswer(true);
         setIsListening(false);
       }
@@ -69,15 +96,17 @@ export const TGDSAnswerPage: React.FC<Props> = ({
     return rec;
   };
 
+  /* ================= Actions ================= */
+
   const toggleListening = () => {
-    if (!isListening) {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
       recognitionRef.current?.abort();
       recognitionRef.current = createRecognition();
       recognitionRef.current.start();
       setIsListening(true);
-    } else {
-      recognitionRef.current?.stop();
-      setIsListening(false);
     }
   };
 
@@ -85,34 +114,33 @@ export const TGDSAnswerPage: React.FC<Props> = ({
     recognitionRef.current?.abort();
     recognitionRef.current = null;
 
-    setRawTranscript('');
     setFinalAnswer(null);
     setHasDetectedAnswer(false);
     setIsListening(false);
   };
 
-  const getAnswerDisplayText = () => {
-    if (finalAnswer === true) return 'ใช่';
-    if (finalAnswer === false) return 'ไม่ใช่';
-    return '';
-    };
-
   useEffect(() => {
     return () => recognitionRef.current?.abort();
   }, []);
 
+  /* ================= Render ================= */
+
   return (
     <BaseTGDSLayout
-      phase="ANSWERING"
       index={index}
       total={total}
       progressPercent={progressPercent}
       questionText={question}
       isListening={isListening}
-      onToggleListening={toggleListening}
-      recordedText={rawTranscript}
+      finalAnswerText={
+        finalAnswer === true
+          ? 'ใช่'
+          : finalAnswer === false
+          ? 'ไม่ใช่'
+          : undefined
+      }
       hasDetectedAnswer={hasDetectedAnswer}
-      getAnswerDisplayText={getAnswerDisplayText} 
+      onToggleListening={toggleListening}
       onResetAnswer={resetAnswer}
       onSubmitAnswer={() => {
         if (finalAnswer !== null) onAnswer(finalAnswer);

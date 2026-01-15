@@ -50,7 +50,6 @@ export const TGDSReadingPage: React.FC<Props> = ({
 
   return (
     <BaseTGDSLayout
-      phase="READING"
       index={index}
       total={total}
       progressPercent={progressPercent}

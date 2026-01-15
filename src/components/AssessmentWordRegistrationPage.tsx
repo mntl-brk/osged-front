@@ -49,7 +49,8 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
   const [autoReplay, setAutoReplay] = useState(false);
   const [attempt, setAttempt] = useState(1); // รอบที่ 1 หรือ 2
   const [needReplay, setNeedReplay] = useState(false);
-  
+  const [isEvaluating, setIsEvaluating] = useState(false);
+
   const [completeStatus, setCompleteStatus] = useState<CompleteStatus | null>(null);
 
     const {
@@ -85,9 +86,9 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     if (hasPlayedAudio || isPlaying) return;
 
     const textToSpeak = `
-      คำที่หนึ่งคือ ${wordSet.words[0]}...
-      คำที่สองคือ ${wordSet.words[1]}...
-      และคำสุดท้ายคือ ${wordSet.words[2]}...
+      คำที่หนึ่งคือ ${wordSet.words[0]}
+      คำที่สองคือ ${wordSet.words[1]}
+      และคำสุดท้ายคือ ${wordSet.words[2]}
     `;
 
     setIsPlaying(true);
@@ -112,10 +113,10 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
 
     const textToSpeak = `
       ครั้งนี้ยังไม่ถูกต้องครับ ไม่เป็นไรนะครับ เดี๋ยวเราลองใหม่กันอีกครั้งนะครับ 
-      มาครับลองกันอีกรอบนะครับ...
-      คำที่หนึ่งคือ ${wordSet.words[0]}...
-      คำที่สองคือ ${wordSet.words[1]}...
-      และคำสุดท้ายคือ ${wordSet.words[2]}...
+      มาครับลองกันอีกรอบ
+      คำที่หนึ่งคือ ${wordSet.words[0]}
+      คำที่สองคือ ${wordSet.words[1]}
+      และคำสุดท้ายคือ ${wordSet.words[2]}
     `;
 
     setIsPlaying(true);
@@ -151,71 +152,28 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
   }, [wordSet]);
 
 
-  const handleSendAnswer = () => {
-    stop();
-
-    if (!transcript.trim()) {
-      alert('กรุณาพูดคำศัพท์ก่อนกดส่ง');
-      return;
-    }
-
-    const normalized = transcript.trim();
-    const isCorrect = wordSet.words.every((w) =>
-      normalized.includes(w)
-    );
-
-    if (isCorrect) {
-      setCompleteStatus('correct');
-      setCompleted(true);
-      return;
-    }
-
-    if (attempt === 1) {
-      setAttempt(2);
-      setAutoReplay(true);
-      setHasPlayedAudio(false);
-      reset();
-      return;
-    }
-
-    if (attempt === 2) {
-      setAttempt(3);
-      reset();
-      return;
-    }
-
-    setCompleteStatus('attempted');
-    setCompleted(true);
-  };
-
   const showPlayButton = !hasPlayedAudio;
   const showMicSection = hasPlayedAudio && !completed;
   const showNextButton = completed;
-  const textshowMicSection = 'ขอให้พูดคำศัพท์ทั้งสามคำที่ได้ยินเมื่อครู่นี้นะครับ พูดทีละคำ ให้คำที่พูดไปก่อนหน้าขึ้นก่อน แล้วค่อยพูดคำต่อไป ไม่ต้องรีบ เมื่อพร้อมแล้ว กดปุ่มเพื่อเริ่มพูดได้เลยครับ';
-  const hasPlayedMicGuide = useRef(false);
+  const textshowMicSection = 'ขอให้พูดคำศัพท์ทั้งสามคำที่ได้ยินเมื่อครู่นี้นะครับ พูดต่อเนื่องกันทั้ง 3 คำได้เลย ไม่ต้องหยุดรอ เมื่อพูดครบแล้ว กดปุ่มส่งคำตอบได้เลยครับ';
+  const [hasPlayedMicGuide, setHasPlayedMicGuide] = useState(false);
 
   const {
     isSpeaking: isMicGuideSpeaking,
   } = useVoiceGuide(
     textshowMicSection,
     {
-      autoPlay: showMicSection && !hasPlayedMicGuide.current,
+      autoPlay: showMicSection && !hasPlayedMicGuide,
       allowReplay: false,
     }
   );
 
   useEffect(() => {
-    if (showMicSection) {
-      hasPlayedMicGuide.current = true;
+    if (showMicSection && !hasPlayedMicGuide) {
+      setHasPlayedMicGuide(true);
     }
-  }, [showMicSection]);
-
+  }, [showMicSection, hasPlayedMicGuide]);
    
-
-  const getDisplayWords = () => {
-    return showMicSection ? recognizedWords : Array(3).fill('???');
-  };
-
   useEffect(() => {
     if (!completed) return;
     if (hasSpokenCompletion.current) return;
@@ -256,64 +214,112 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
   }, [completed, completeStatus]);
 
 
+  const evaluateAnswer = () => {
+    setIsEvaluating(false);
+    
+    if (!transcript.trim()) {
+      alert("กรุณาพูดคำอย่างน้อย 1 คำครับ");
+      return;
+    }
+
+    const normalized = transcript.trim();
+    const isCorrect = wordSet.words.every((w) =>
+      normalized.includes(w)
+    );
+
+    if (isCorrect) {
+      setCompleteStatus('correct');
+      setCompleted(true);
+      return;
+    }
+
+    if (attempt === 1) {
+      setAttempt(2);
+      setAutoReplay(true);
+      setHasPlayedAudio(false);
+      reset();
+      return;
+    }
+
+    if (attempt === 2) {
+      setAttempt(3);
+      reset();
+      return;
+    }
+
+    setCompleteStatus('attempted');
+    setCompleted(true);
+  };
+
+  const isBlocked = isSpeaking || isPlaying;
+
   return (
     <div className="w-full max-w-4xl mx-auto px-6 py-8 animate-fade-in flex flex-col items-center pb-32">
 
-  {!completed && (
-    <h1 className="text-3xl md:text-5xl font-bold text-center mb-8 text-gray-900 mt-12">
-      {showMicSection
-        ? 'พูดคำทั้ง 3 คำที่ได้ยินเมื่อครู่'
-        : 'กรุณาฟังและจำคำ 3 คำต่อไปนี้'}
-    </h1>
-  )}
-
-   {attempt === 2 && !completed && (
-      <div className="mb-6 flex justify-center">
-        <p className="text-orange-500 font-semibold text-3xl">
-          😊 ไม่เป็นไรนะครับ เดี๋ยวเราลองฟังและพูดอีกครั้งกัน
-        </p>
-      </div>
-    )}
-
-    {attempt === 3 && !completed && (
-      <p className="text-red-500 font-semibold text-3xl mt-4 mb-8">
-         ⚠️ รอบนี้เป็นรอบสุดท้าย มาลองกันอีกสักรอบกันครับ
-      </p>
-    )}
-
     {!completed && (
-      <div className="flex flex-wrap justify-center gap-4 mb-8 w-full max-w-3xl">
-        {[0, 1, 2].map((i) => {
-            const displayWords = getDisplayWords();
-            const displayText = showMicSection ? (displayWords[i] || '...') : '???';
-            return (
-                 <div key={i} className={`
-                    w-40 h-24 rounded-2xl border-4 flex flex-col items-center justify-center transition-all
-                    ${recognizedWords[i] 
-                        ? 'bg-blue-50 border-primary text-primary shadow-lg scale-105' 
-                        : 'bg-gray-50 border-gray-200 text-gray-400'}
-                 `}>
-                    <span className="text-base font-semibold opacity-70">คำที่ {i+1}</span>
-                    <span className="text-4xl font-black">
-                        {displayText}
-                    </span>
-                 </div>
-            );
-        })}
+      <div className="w-full max-w-2xl mx-auto text-center mt-10 mb-6 px-4">
+        <h1 className="font-black text-gray-900 leading-tight
+          text-2xl sm:text-3xl lg:text-5xl">
+          {showMicSection
+            ? 'พูดคำทั้ง 3 คำที่ได้ยินเมื่อสักครู่'
+            : 'ฟังและจำคำ 3 คำต่อไปนี้'}
+        </h1>
       </div>
-      )}
+    )}
+
+    {/* รอบที่ 2 */}
+    {attempt === 2 && !completed && (
+      <div className="mx-auto mb-6 px-4">
+        <div className="
+          bg-orange-50 border-2 border-orange-200
+          text-orange-600
+          rounded-2xl px-5 py-4
+          text-center font-semibold
+          text-base sm:text-lg lg:text-2xl
+        ">
+          😊 ไม่เป็นไรนะครับ <br className="sm:hidden" />
+          ลองฟังและพูดอีกครั้งได้เลยครับ
+        </div>
+      </div>
+    )}
+
+    {/* รอบสุดท้าย */}
+    {attempt === 3 && !completed && (
+      <div className="mx-auto mb-8 px-4">
+        <div className="
+          bg-red-50 border-2 border-red-300
+          text-red-600
+          rounded-2xl px-5 py-4
+          text-center font-bold
+          text-base sm:text-lg lg:text-2xl
+        ">
+          ⚠️ รอบสุดท้ายแล้วครับ <br className="sm:hidden" />
+          ลองทำอีกครั้งอย่างเต็มที่นะครับ
+        </div>
+      </div>
+    )}
+
 
       <div className="w-full max-w-2xl flex flex-col items-center gap-8">
         
         {showPlayButton ? (
-            <div className="flex flex-col items-center gap-6 animate-fade-in w-full">
+            <div className="
+              flex flex-col items-center gap-8
+              w-full max-w-md
+              bg-white px-6 py-8
+              rounded-[32px]
+              border-4 border-primary/20
+              shadow-xl
+              animate-fade-in
+            ">
+
                 <button
                   onClick={speakWords}
-                  disabled={isPlaying || isSpeaking}
+                  disabled={isPlaying || isGuideSpeaking}
                   className={`
                     w-40 h-40 rounded-full flex items-center justify-center shadow-2xl border-8 transition-all mt-4
                     ${
-                      isPlaying || isSpeaking
+                      isPlaying || isGuideSpeaking
                         ? 'bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed'
                         : 'bg-primary text-white border-blue-200 hover:scale-105'
                     }
@@ -361,88 +367,103 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
         ) : null}
 
         {showMicSection && (
-          <div className="flex flex-col items-center gap-10 animate-fade-in w-full min-w-3xl bg-white px-10 py-12 rounded-[40px] border-4 border-primary/20 shadow-2xl">
+            <div className="
+              flex flex-col items-center gap-6
+              w-full max-w-md
+              bg-white px-6 py-8
+              rounded-[32px]
+              border-4 border-primary/20
+              shadow-xl
+              animate-fade-in
+            ">
 
-            {/* ===== Guide Text ===== */}
-            <div className="text-center space-y-2">
-
-               <div className={`${isSpeaking ? 'opacity-30 blur-sm' : ''} transition-all`}>
-                <p className="text-xl text-gray-500">
-                  คุณพูดได้ <span className="font-bold">{recognizedWords.length}</span> จาก 3 คำ
-                </p>
+          {/* ===== Progress ===== */}
+          {isEvaluating && (
+            <div className="mt-4 flex items-center justify-center gap-2 text-green-600">
+              <span className="text-lg font-medium">
+                กำลังตรวจสอบให้ครับ
+              </span>
+              <div className="flex gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce" />
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce delay-150" />
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce delay-300" />
               </div>
             </div>
+          )}
 
-            {/* ===== Status ===== */}
-            <div className="h-4 flex items-center justify-center text-center">
-              {isSpeaking ? (
-                <span className="text-gray-500 text-lg font-semibold animate-pulse">
-                   กำลังอธิบาย กรุณารอฟังให้จบ
+            {transcript && (
+              <div className="
+                mt-2 px-6 py-2
+                bg-gray-50 border-2 border-gray-200
+                rounded-2xl text-center
+              ">
+                <p className="text-lg text-gray-600">
+                  ได้ยินว่า:
+                </p>
+                <p className="text-2xl font-semibold text-gray-800 mt-2">
+                  {transcript}
+                </p>
+              </div>
+            )}
+
+          {/* ===== Status ===== */}
+          <div className="min-h-[56px] flex items-center justify-center text-center">
+            {isMicGuideSpeaking ? (
+              <span className="text-gray-500 text-lg font-semibold animate-pulse">
+                กำลังอธิบาย กรุณารอฟัง
+              </span>
+            ) : isListening ? (
+              <div className="flex items-center gap-3 bg-red-50 px-6 py-2 rounded-full border-2 border-red-200">
+                <ListeningWave />
+                <span className="text-red-600 font-bold text-lg">
+                  กำลังฟังอยู่
                 </span>
-              ) : isListening ? (
-                <div className="flex items-center gap-4 bg-red-50 px-8 py-3 rounded-full border-2 border-red-200">
-                  <ListeningWave />
-                  <span className="text-red-600 font-bold text-xl">
-                    กำลังฟังอยู่...
-                  </span>
-                </div>
-              ) : (
-                <span className="text-gray-400 text-lg italic">
-                  "ให้พูดทีละคำ โดยให้คำที่พูดไปก่อนหน้าขึ้นก่อน แล้วค่อยพูดคำต่อไป"
-                </span>
-              )}
-            </div>
-
-            {/* ===== Actions ===== */}
-            <div className="flex items-center justify-center gap-12 w-full">
-
-              {/* Mic Button */}
-              <button
-                onClick={() => (isListening ? stop() : start())}
-                disabled={isSpeaking}
-                className={`
-                  w-36 h-36 rounded-full flex flex-col items-center justify-center
-                  shadow-2xl border-[6px] transition-all
-                  ${
-                    isSpeaking
-                      ? 'bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed'
-                      : isListening
-                        ? 'bg-white text-red-600 border-red-500 animate-pulse'
-                        : 'bg-red-500 text-white border-red-700 hover:scale-110 active:scale-95'
-                  }
-                `}
-              >
-                {isListening ? <StopCircle size={64} /> : <Mic size={64} />}
-                <span className="text-sm font-black mt-2 tracking-wider">
-                  {isSpeaking ? 'รอฟัง' : isListening ? 'หยุดพูด' : 'พูด'}
-                </span>
-              </button>
-
-              {/* Send Button (ไม่บล็อค) */}
-              <button
-                onClick={handleSendAnswer}
-                className={`
-                  w-28 h-28 rounded-full flex flex-col items-center justify-center
-                  shadow-2xl border-[6px] transition-all
-                  ${
-                    recognizedWords.length === 0
-                      ? 'bg-gray-100 border-gray-300 text-gray-400'
-                      : 'bg-green-500 border-green-700 text-white hover:bg-green-600 hover:scale-110 active:scale-95'
-                  }
-                `}
-              >
-                <Send size={48} />
-                <span className="text-sm font-black mt-2">
-                  ส่งคำตอบ
-                </span>
-              </button>
-
-            </div>
-              <p className="text-gray-400 text-base">
-                  หากนึกไม่ออก สามารถกดส่งคำตอบได้เลยครับ
-              </p>
+              </div>
+            ) : (
+              <span className="text-gray-400 text-base italic px-4">
+                กดปุ่มแล้วพูดคำศัพท์ทั้ง 3 คำ ต่อเนื่องได้เลยครับ
+              </span>
+            )}
           </div>
-        )}
+
+          {/* ===== Mic Button (Primary) ===== */}
+          <button
+             onClick={() => {
+                if (isListening) {
+                  setIsEvaluating(true);
+                  stop();
+                  setTimeout(evaluateAnswer, 2000); 
+                } else {
+                  start();
+                }
+              }}
+            disabled={isSpeaking}
+            className={`
+              w-44 h-44 rounded-full
+              flex flex-col items-center justify-center
+              shadow-2xl transition-all
+              ${
+                isSpeaking
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : isListening
+                    ? 'bg-red-600 text-white animate-pulse'
+                    : 'bg-red-500 text-white hover:scale-105 active:scale-95'
+              }
+            `}
+          >
+            {isListening ? <StopCircle size={72} /> : <Mic size={72} />}
+            <span className="text-lg font-black mt-3">
+                {isListening ? 'กดเมื่อพูดครบแล้ว' : 'กดเพื่อพูด'}
+              </span>
+          </button>
+
+          {/* ===== Helper Text ===== */}
+            <p className="text-gray-400 text-center text-base px-4">
+              พูดเสร็จแล้วกดปุ่มสีแดงได้เลย ระบบจะตรวจสอบให้ทันที
+            </p>
+
+        </div>
+      )}
 
        {completed && completeStatus === 'attempted' && (
           <div className="mt-42 flex flex-col items-center gap-6 animate-fade-in">
@@ -459,19 +480,27 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
               ขอบคุณที่ตั้งใจทำแบบทดสอบนะครับ อย่าลืมจำคำเหล่านี้ไว้
             </p>
 
-            <button
+           <button
               onClick={onNext}
-              className="
+              disabled={isBlocked}
+              className={`
                 mt-4
                 w-full max-w-sm
-                bg-primary hover:bg-primaryHover
-                text-white h-24
-                rounded-3xl text-3xl font-black
+                h-24
+                rounded-3xl
+                text-3xl
+                font-black
                 shadow-2xl
                 flex items-center justify-center gap-4
-              "
+                transition-all
+                ${
+                  isBlocked
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-primary hover:bg-primaryHover text-white'
+                }
+              `}
             >
-              ไปข้อถัดไป
+              {isBlocked ? 'กำลังอธิบาย...' : 'ไปข้อถัดไป'}
               <ArrowRight size={44} strokeWidth={4} />
             </button>
           </div>
@@ -491,13 +520,13 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
 
            <button
               onClick={onNext}
-              disabled={isSpeaking}
+              disabled={isBlocked}
               className={`
                 mt-4 w-full max-w-sm h-24 rounded-3xl text-3xl font-black
                 flex items-center justify-center gap-4
                 transition-all
                 ${
-                  isSpeaking
+                  isBlocked
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     : 'bg-primary hover:bg-primaryHover text-white'
                 }

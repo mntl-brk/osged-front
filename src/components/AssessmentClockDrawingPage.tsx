@@ -58,9 +58,21 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
     });
   };
   
+  const lockScroll = () => {
+  document.body.style.overflow = 'hidden';
+  document.body.style.touchAction = 'none';
+  };
+
+  const unlockScroll = () => {
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+  };
+
   const handlePointerDown = (e: React.PointerEvent, id: number | 'hour' | 'minute') => {
     if (isSpeaking) return;
     e.preventDefault();
+
+    lockScroll();        
     pushHistory();
     setDraggingId(id);
   };
@@ -87,7 +99,11 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
     }
   };
 
-  const handlePointerUp = () => setDraggingId(null);
+    
+  const handlePointerUp = () => {
+    unlockScroll();     
+    setDraggingId(null);
+  };
 
   const placeFromPalette = (id: number | 'hour' | 'minute') => {
     if (isSpeaking) return;
@@ -188,7 +204,7 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
 
   return (
     <div 
-      className="w-full max-w-6xl mx-auto px-4 py-8 animate-fade-in flex flex-col items-center pb-24 select-none touch-none"
+      className="w-full max-w-6xl mx-auto px-4 py-8 animate-fade-in flex flex-col items-center pb-24 select-none"
       onPointerUp={handlePointerUp}
       onPointerMove={handlePointerMove}
     >
@@ -235,6 +251,7 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
                     border-[10px] border-gray-900
                     shadow-2xl
                     flex items-center justify-center
+                    touch-none
                   "
                 >
 
@@ -264,7 +281,7 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
                 onPointerDown={(e) => handlePointerDown(e, 'hour')}
                 className="absolute top-1/2 left-1/2 origin-left h-3 bg-black z-20 cursor-grab"
                 style={{
-                  width: hourHand.isPlaced ? '20%' : '40%',
+                  width: hourHand.isPlaced ? '15%' : '30%',
                   transform: `rotate(${hourHand.angle - 90}deg) translateY(-50%)`,
                 }}
               >
@@ -280,7 +297,7 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
                 onPointerDown={(e) => handlePointerDown(e, 'minute')}
                 className="absolute top-1/2 left-1/2 origin-left h-3 bg-black z-30 cursor-grab"
                 style={{
-                  width: minuteHand.isPlaced ? '28%' : '55%',
+                  width: minuteHand.isPlaced ? '22%' : '50%',
                   transform: `rotate(${minuteHand.angle - 90}deg) translateY(-50%)`,
                 }}
               >

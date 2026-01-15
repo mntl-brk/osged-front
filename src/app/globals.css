@@ -34,3 +34,7 @@ body {
 .animate-wave {
   animation: wave 1s infinite ease-in-out;
 }
+
+.touch-none {
+  touch-action: none;
+}

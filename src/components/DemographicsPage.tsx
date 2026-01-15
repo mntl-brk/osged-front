@@ -28,6 +28,13 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
 
   const { isSpeaking, replay } = useVoiceGuide(demographicsGuideText)
   
+  const isFormComplete =
+    locationDescription.trim() !== '' &&
+    age !== '' &&
+    gender !== null &&
+    locationType !== null &&
+    educationLevel !== null;
+
   const handleSubmit = () => {
     if (!locationDescription.trim() || !age || !gender || !locationType || !educationLevel) {
       alert('กรุณากรอกข้อมูลให้ครบทุกข้อ');
@@ -196,21 +203,24 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
       </div>
 
       <div className="mt-16 flex justify-center">
-        <button 
-          onClick={handleSubmit}
-          className="
-            w-full max-w-md
-            bg-primary hover:bg-primaryHover text-white 
-            py-6 px-8 rounded-2xl 
-            text-2xl font-bold 
-            shadow-lg hover:shadow-xl hover:-translate-y-1
-            transform transition-all duration-200
-            flex items-center justify-center gap-3
-          "
-        >
-          <span>ไปหน้าถัดไป</span>
-          <ArrowRight size={32} strokeWidth={3} />
-        </button>
+            <button 
+              onClick={handleSubmit}
+              disabled={!isFormComplete}
+              className={`
+                w-full max-w-md
+                py-6 px-8 rounded-2xl 
+                text-2xl font-bold 
+                flex items-center justify-center gap-3
+                transition-all duration-200
+
+                ${isFormComplete
+                  ? 'bg-primary hover:bg-primaryHover text-white shadow-lg hover:shadow-xl hover:-translate-y-1'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
+              `}
+            >
+              <span>ไปหน้าถัดไป</span>
+              <ArrowRight size={32} strokeWidth={3} />
+            </button>
       </div>
     </div>
   );

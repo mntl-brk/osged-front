@@ -9,7 +9,7 @@ interface InstructionPageProps {
 
 export const InstructionPage: React.FC<InstructionPageProps> = ({ onStart }) => {
 const instructionGuideText =
-  'ก่อนเริ่มทำแบบคัดกรองนะครับ การประเมินนี้จะใช้เวลาประมาณ 5 ถึง 10 นาที แนะนำให้อยู่ในที่เงียบและมีแสงสว่างเพียงพอ หากมีผู้ดูแล สามารถช่วยอ่านคำสั่งให้ได้ ไม่ต้องกังวลนะครับ ทำตามความสามารถของท่านได้เลย เมื่อพร้อมแล้ว กรุณากดปุ่ม เริ่มทำแบบคัดกรอง ด้านล่าง เพื่อเริ่มต้นครับ'
+  'ก่อนเริ่มทำแบบคัดกรองนะครับ การประเมินนี้จะใช้เวลาประมาณ 5 ถึง 10 นาที แนะนำให้อยู่ในที่เงียบและมีแสงสว่างเพียงพอ เมื่อพร้อมแล้ว กรุณากดปุ่ม เริ่มทำแบบคัดกรอง ด้านล่าง เพื่อเริ่มต้นครับ'
 
 const { isSpeaking, replay } = useVoiceGuide(instructionGuideText)
   return (
@@ -27,7 +27,7 @@ const { isSpeaking, replay } = useVoiceGuide(instructionGuideText)
                     <Clock size={32} strokeWidth={2.5} />
                 </div>
                 <div>
-                    <span className="text-xl md:text-2xl font-medium text-gray-700 leading-relaxed block">
+                    <span className="text-xl md:text-2xl font-medium text-gray-700 leading-relaxed block mt-2">
                         ใช้เวลาประเมินประมาณ <span className="text-primary font-bold">5–10 นาที</span>
                     </span>
                 </div>
@@ -38,13 +38,13 @@ const { isSpeaking, replay } = useVoiceGuide(instructionGuideText)
                     <Volume2 size={32} strokeWidth={2.5} />
                 </div>
                 <div>
-                    <span className="text-xl md:text-2xl font-medium text-gray-700 leading-relaxed block">
+                    <span className="text-xl md:text-2xl font-medium text-gray-700 leading-relaxed block mt-2">
                         ควรอยู่ในที่ <span className="text-gray-900 font-semibold">เงียบ สงบ</span> และมีแสงสว่างเพียงพอ
                     </span>
                 </div>
             </li>
 
-            <li className="flex items-start gap-6">
+            {/* <li className="flex items-start gap-6">
                  <div className="bg-orange-100 p-3 rounded-full text-orange-600 shrink-0 mt-1">
                     <Users size={32} strokeWidth={2.5} />
                 </div>
@@ -53,7 +53,7 @@ const { isSpeaking, replay } = useVoiceGuide(instructionGuideText)
                         ถ้ามีผู้ดูแล สามารถช่วย <span className="text-gray-900 font-semibold">อ่านคำสั่ง</span> ให้ได้
                     </span>
                 </div>
-            </li>
+            </li> */}
 
              {/* <li className="flex items-start gap-6">
                  <div className="bg-purple-100 p-3 rounded-full text-purple-600 shrink-0 mt-1">
