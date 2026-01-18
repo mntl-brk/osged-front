@@ -1,8 +1,8 @@
 'use client'
 
-import { AppShell } from '@/components/AppShell'
+import { AppShell } from '@/components/public/AppShell'
 import { Hero } from '@/components/Hero'
-import { InfoSection } from '@/components/InfoSection'
+import { InfoSection } from '@/components/public/InfoSection'
 import { Footer } from '@/components/Footer'
 import { useRouter } from 'next/navigation'
 import { useAssessmentStore } from '@/store/assessmentStore'
@@ -33,7 +33,7 @@ export default function HomePage() {
         onOpenInfo={() => setModalContent('project-info')}
         onOpenFAQ={() => setModalContent('faq')}
         onOpenPDPA={() => setModalContent('pdpa')}
-        onOpenDoctorPortal={() => router.push('/doctor')}
+        onOpenDoctorPortal={() => router.push('dashboard')}
       />
     </AppShell>
   )

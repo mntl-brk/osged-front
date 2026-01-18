@@ -48,9 +48,6 @@ export const Modal: React.FC<ModalProps> = ({ type, onClose }) => {
                 OSGED (Online Screening for Geriatric Cognitive and Emotional Disorders) 
                 คือโครงการวิจัยเพื่อพัฒนาระบบคัดกรองภาวะสมองเสื่อมและภาวะซึมเศร้าในผู้สูงอายุผ่านระบบออนไลน์
               </p>
-              <p>
-                พัฒนาโดยทีมวิจัยร่วมระหว่างวิศวกรคอมพิวเตอร์และแพทย์ผู้เชี่ยวชาญด้านเวชศาสตร์ผู้สูงอายุ
-              </p>
             </div>
           )
         };

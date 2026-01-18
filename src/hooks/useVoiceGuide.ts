@@ -13,6 +13,8 @@ export type VoiceGuideStatus = 'idle' | 'preparing' | 'speaking'
 interface Options {
   autoPlay?: boolean
   allowReplay?: boolean
+  onEnd?: () => void
+  onStart?: () => void
 }
 
 export const useVoiceGuide = (
@@ -20,6 +22,8 @@ export const useVoiceGuide = (
   {
     autoPlay = true,
     allowReplay = true,
+    onEnd,
+    onStart,
   }: Options = {}
 ) => {
   const [status, setStatus] =
@@ -37,9 +41,11 @@ export const useVoiceGuide = (
       () => {
         setStatus('idle')
         setAudioIdle()
+        onEnd?.()
       },
       () => {
         setStatus('speaking')
+        onStart?.()
       }
     )
   }
@@ -48,11 +54,12 @@ export const useVoiceGuide = (
     if (!allowReplay) return
 
     if (!isAudioUnlocked()) {
-        await unlockAudio()
+      await unlockAudio()
     }
 
     play()
-}
+  }
+
   useEffect(() => {
     if (!autoPlay) return
     if (hasPlayed.current) return
@@ -60,7 +67,7 @@ export const useVoiceGuide = (
 
     hasPlayed.current = true
     play()
-  }, [])
+  }, [autoPlay, text])
 
   useEffect(() => {
     if (!allowReplay) return
