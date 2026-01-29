@@ -5,20 +5,21 @@ import {
   CreateDemographicsResponseSchema,
 } from '@/schemas/demographics.schema'
 
-export const createDemographics = (payload: {
-  session_id: string
-  age_years: number
-  sex: 'male' | 'female' | 'other'
-  current_location: string
-  education_level: 'below_p4' | 'p4_or_above'
-  location_type: 'home' | 'nursing_home' | 'hospital'
-}) =>
+export const createDemographics = (
+  payload: {
+    sessionId: string
+    age_years: number
+    sex: 'male' | 'female' | 'other'
+    current_location: string
+    education_level: 'below_p4' | 'p4_or_above'
+    location_type: 'home' | 'nursing_home' | 'hospital'
+  }) =>
   apiAction(
     payload,
     CreateDemographicsRequestSchema,
     CreateDemographicsResponseSchema,
     async (v) => {
-      const res = await post(`/api/demographics/${v.session_id}`, v)
-      return res
+      const res = await post(`/api/demographics/${v.sessionId}/create`, v)
+      return res.data
     }
   )

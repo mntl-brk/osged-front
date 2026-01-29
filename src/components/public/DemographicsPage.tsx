@@ -11,6 +11,9 @@ import {
 } from 'lucide-react';
 import { Gender, Location, DemographicsData, EducationLevel } from '@/types';
 import { useVoiceGuide } from '@/hooks/useVoiceGuide';
+import { useAssessmentStore } from '@/store/assessmentStore';
+import { createDemographics } from '@/api/demographics/createDemographics';
+import { sleep } from '@/hooks/useSleepPage';
 
 
 interface DemographicsPageProps {
@@ -20,6 +23,8 @@ interface DemographicsPageProps {
 export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) => {
   const [locationDescription, setLocationDescription] = useState('');
   const [age, setAge] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
   const [gender, setGender] = useState<Gender | null>(null);
   const [locationType, setLocationType] = useState<Location | null>(null);
   const [educationLevel, setEducationLevel] = useState<EducationLevel | null>(null);
@@ -47,20 +52,54 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
     locationType !== null &&
     educationLevel !== null;
 
-  const handleSubmit = () => {
+  const sessionId = useAssessmentStore((s) => s.sessionId)
+
+  const handleSubmit = async () => {
+     setIsLoading(true);
+
     if (!locationDescription.trim() || !age || !gender || !locationType || !educationLevel) {
-      alert('กรุณากรอกข้อมูลให้ครบทุกข้อ');
-      return;
+      alert('กรุณากรอกข้อมูลให้ครบทุกข้อ')
+      return
     }
 
-    onSubmit({ 
-      currentLocationDescription: locationDescription,
-      age, 
-      gender, 
-      locationType,
-      educationLevel,
-    });
-  };
+    if (!sessionId) {
+      alert('Session not found')
+      return
+    }
+
+    try {
+      await sleep(500);
+      
+      const result = await createDemographics({
+        sessionId: sessionId,
+        age_years: Number(age),
+        sex: gender!,
+        current_location: locationDescription,
+        location_type: locationType!,
+        education_level: educationLevel!,
+      })
+
+      result.match(
+        () => {
+          onSubmit({
+            currentLocationDescription: locationDescription,
+            age,
+            gender,
+            locationType,
+            educationLevel,
+          })
+        },
+        (err) => {
+          console.log(err)
+          alert('ไม่สามารถบันทึกข้อมูลพื้นฐานได้ กรุณาลองใหม่อีกครั้ง')
+        }
+      )
+    } catch (e) {
+      alert('เกิดข้อผิดพลาดของระบบ กรุณาลองใหม่')
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   return (
     <div className="w-full max-w-3xl mx-auto px-6 py-8 animate-fade-in pb-32">
@@ -224,15 +263,23 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
                 text-2xl font-bold 
                 flex items-center justify-center gap-3
                 transition-all duration-200
-
+                ${isLoading ? 'opacity-80 cursor-not-allowed' : 'hover:-translate-y-2'}
                 ${isFormComplete
                   ? 'bg-primary hover:bg-primaryHover text-white shadow-lg hover:shadow-xl hover:-translate-y-1'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
               `}
+              
             >
+              {isLoading ? (
+          <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+            <>
               <span>ไปหน้าถัดไป</span>
               <ArrowRight size={32} strokeWidth={3} />
-            </button>
+            </>
+        )}
+        </button>
+
       </div>
     </div>
   );

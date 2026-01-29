@@ -19,7 +19,7 @@ export const EducationLevelSchema = union([
 
 /* ---------- request ---------- */
 export const CreateDemographicsRequestSchema = object({
-  session_id: string(), // UUID string
+  sessionId: string(),
   age_years: number(),
   sex: GenderSchema,
   current_location: string(),
@@ -29,11 +29,7 @@ export const CreateDemographicsRequestSchema = object({
 
 /* ---------- response ---------- */
 export const CreateDemographicsResponseSchema = object({
-  demographics_id: string(),
   session_id: string(),
   age_years: number(),
   sex: GenderSchema,
-  current_location: string(),
-  location_type: LocationTypeSchema,
-  education_level: EducationLevelSchema,
 })

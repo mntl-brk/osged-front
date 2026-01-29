@@ -69,7 +69,7 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
             setSessionId(session.session_id)
 
             const formData = new FormData()
-            formData.append('file', recordedBlob, 'consent.webm')
+            formData.append('file', recordedBlob)
 
             const uploadRes = await fetch(
                 `/api/media/consent/${session.session_id}`,

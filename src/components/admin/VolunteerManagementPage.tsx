@@ -28,8 +28,6 @@ export const VolunteerManagementPage: React.FC<VolunteerManagementPageProps> = (
   useEffect(() => {
     const load = async () => {
       const result = await listParticipants()
-
-      console.log(result)
       result.match(
         (data) => {
           setCodes(
