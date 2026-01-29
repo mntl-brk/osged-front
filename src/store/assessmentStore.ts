@@ -8,7 +8,8 @@ type State = {
   language: 'th' | 'en'
 
   demographics: DemographicsData | null
-  volunteerCode: string
+  participantId: string
+  sessionId: string | null
 
   currentWordSet: WordSet | null
   clockImage: string | null
@@ -19,7 +20,8 @@ type State = {
   setFontSize: (v: State['fontSize']) => void
   setLanguage: (v: State['language']) => void
   setDemographics: (v: DemographicsData | null) => void
-  setVolunteerCode: (v: string) => void
+  setSessionId: (id: string) => void
+  setParticipantId: (v: string) => void
   setCurrentWordSet: (v: WordSet | null) => void
   setClockImage: (v: string | null) => void
   setRecallScore: (v: number | null) => void
@@ -34,7 +36,8 @@ export const useAssessmentStore = create<State>((set) => ({
   language: 'th',
 
   demographics: null,
-  volunteerCode: '',
+  participantId: '',
+  sessionId: null,
 
   currentWordSet: null,
   clockImage: null,
@@ -45,7 +48,8 @@ export const useAssessmentStore = create<State>((set) => ({
   setFontSize: (v) => set({ fontSize: v }),
   setLanguage: (v) => set({ language: v }),
   setDemographics: (v) => set({ demographics: v }),
-  setVolunteerCode: (v) => set({ volunteerCode: v }),
+  setParticipantId: (v) => set({ participantId: v }),
+  setSessionId: (id) => set({ sessionId: id }),
   setCurrentWordSet: (v) => set({ currentWordSet: v }),
   setClockImage: (v) => set({ clockImage: v }),
   setRecallScore: (v) => set({ recallScore: v }),
@@ -55,7 +59,8 @@ export const useAssessmentStore = create<State>((set) => ({
     set({
       modalContent: null,
       demographics: null,
-      volunteerCode: '',
+      participantId: '',
+      sessionId: null,
       currentWordSet: null,
       clockImage: null,
       recallScore: null,

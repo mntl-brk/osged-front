@@ -11,6 +11,7 @@ export const useCameraRecorder = () => {
   const [isRecording, setIsRecording] = useState(false)
   const [hasRecorded, setHasRecorded] = useState(false)
   const [cameraError, setCameraError] = useState(false)
+  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null)
 
   /* =========================
      Camera Control
@@ -62,12 +63,28 @@ export const useCameraRecorder = () => {
 
     if (!streamRef.current) return
 
-    const recorder = new MediaRecorder(streamRef.current)
+    const recorder = new MediaRecorder(streamRef.current, {
+      mimeType: 'video/webm;codecs=vp9', // browser-safe
+    })
+
     mediaRecorderRef.current = recorder
     chunksRef.current = []
+    setRecordedBlob(null)
 
     recorder.ondataavailable = e => {
-      if (e.data.size > 0) chunksRef.current.push(e.data)
+      if (e.data.size > 0) {
+        chunksRef.current.push(e.data)
+      }
+    }
+
+    recorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, {
+        type: 'video/webm',
+      })
+
+      setRecordedBlob(blob)
+      setHasRecorded(true)
+      chunksRef.current = []
     }
 
     recorder.start()
@@ -83,10 +100,8 @@ export const useCameraRecorder = () => {
 
     mediaRecorderRef.current = null
     setIsRecording(false)
-    setHasRecorded(true)
     stopCamera()
   }
-
 
   const cleanup = () => {
     try {
@@ -104,6 +119,7 @@ export const useCameraRecorder = () => {
     isRecording,
     hasRecorded,
     cameraError,
+    recordedBlob,     
     startCamera,
     startRecording,
     stopRecording,

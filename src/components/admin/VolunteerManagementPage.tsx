@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   ArrowLeft, 
   UserPlus, 
@@ -10,53 +10,86 @@ import {
   Calendar,
   Key
 } from 'lucide-react';
-
-interface VolunteerCode {
-  id: string;
-  code: string;
-  createdAt: string;
-  status: 'unused' | 'used';
-}
+import { listParticipants } from '@/api/participant/listParticipants'
+import { createParticipant } from '@/api/participant/createParticipant'
+import { Participant } from '@/types/Participant';
 
 interface VolunteerManagementPageProps {
   onBack: () => void;
 }
 
 export const VolunteerManagementPage: React.FC<VolunteerManagementPageProps> = ({ onBack }) => {
-  const [codes, setCodes] = useState<VolunteerCode[]>([
-    { id: '1', code: 'V-A7B2', createdAt: '2024-05-20T10:00:00', status: 'used' },
-    { id: '2', code: 'V-9K1M', createdAt: '2024-05-21T11:30:00', status: 'unused' },
-  ]);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [codes, setCodes] = useState<Participant[]>([])
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
-  const generateCode = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let result = 'V-'; // Updated prefix to V-
-    for (let i = 0; i < 4; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
+  // =========================
+  // LOAD PARTICIPANTS
+  // =========================
+  useEffect(() => {
+    const load = async () => {
+      const result = await listParticipants()
+
+      console.log(result)
+      result.match(
+        (data) => {
+          setCodes(
+            data.map((p) => ({
+              id: p.id,
+              code: p.code,
+              status: p.status,
+              created_at: p.created_at,
+            }))
+          )
+        },
+        () => {
+          alert('โหลดข้อมูลไม่สำเร็จ')
+        }
+      )
     }
-    
-    const newCode: VolunteerCode = {
-      id: Date.now().toString(),
-      code: result,
-      createdAt: new Date().toISOString(),
-      status: 'unused'
-    };
-    
-    setCodes([newCode, ...codes]);
-  };
 
+    load()
+  }, [])
+
+  // =========================
+  // CREATE PARTICIPANT
+  // =========================
+  const generateCode = async () => {
+    const result = await createParticipant()
+
+    result.match(
+      (p) => {
+        const newCode: Participant = {
+          id: p.id,
+          code: p.code,
+          status: p.status,
+          created_at: p.created_at,
+        }
+
+        setCodes((prev) => [newCode, ...prev])
+      },
+      () => {
+        alert('สร้างรหัสไม่สำเร็จ')
+      }
+    )
+  }
+
+  // =========================
+  // COPY
+  // =========================
   const copyToClipboard = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
+    navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
 
+  // =========================
+  // DELETE (UI ONLY ตอนนี้)
+  // =========================
   const deleteCode = (id: string) => {
-    if (confirm('คุณต้องการลบรหัสนี้ใช่หรือไม่?')) {
-      setCodes(codes.filter(c => c.id !== id));
-    }
-  };
+    if (!confirm('คุณต้องการลบรหัสนี้ใช่หรือไม่?')) return
+    setCodes((prev) => prev.filter((c) => c.id !== id))
+  }
+
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans animate-fade-in">
@@ -95,7 +128,7 @@ export const VolunteerManagementPage: React.FC<VolunteerManagementPageProps> = (
                 className="bg-primary hover:bg-primaryHover text-white px-12 py-6 rounded-[35px] text-2xl font-black shadow-2xl shadow-primary/20 hover:-translate-y-1.5 transition-all active:scale-95 flex items-center gap-4 mx-auto"
             >
                 <UserPlus size={32} />
-                สร้างรหัส (Prefix: V-)
+                สร้างรหัสเคสใหม่
             </button>
         </div>
 
@@ -133,7 +166,7 @@ export const VolunteerManagementPage: React.FC<VolunteerManagementPageProps> = (
                                     </div>
                                     <p className="text-sm text-gray-400 flex items-center gap-2 mt-2 font-bold uppercase tracking-widest">
                                         <Calendar size={16} />
-                                        Created: {new Date(item.createdAt).toLocaleString('th-TH')}
+                                        สร้างเมื่อ: {item.created_at ? new Date(item.created_at).toLocaleString('th-TH') : 'N/A'}
                                     </p>
                                 </div>
                             </div>

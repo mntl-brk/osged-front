@@ -25,12 +25,14 @@ import {
   // Added AlertCircle to fix missing import error
   AlertCircle
 } from 'lucide-react';
-import { PatientRecord, Gender } from '../types';
+import { PatientRecord, Gender } from '@/types';
+import Link from 'next/link';
 
 // --- Updated Mock Data with V- Prefix ---
 const MOCK_PATIENTS: PatientRecord[] = [
   {
-    id: 'ก001',
+    id: 'p-0001',
+    volunteersId: 'ก001',
     timestamp: '2024-05-20T10:30:00',
     demographics: {
         currentLocationDescription: 'ลาดพร้าว จตุจักร กรุงเทพฯ 10900',
@@ -50,7 +52,8 @@ const MOCK_PATIENTS: PatientRecord[] = [
     status: 'normal'
   },
   {
-    id: 'ก002',
+    id: 'p-0002',
+    volunteersId: 'ก002',
     timestamp: '2024-05-22T09:00:00',
     demographics: {
         currentLocationDescription: 'พหลโยธิน พญาไท กรุงเทพฯ 10400',
@@ -70,7 +73,6 @@ const MOCK_PATIENTS: PatientRecord[] = [
     status: 'high-risk'
   }
 ];
-
 interface DoctorDashboardPageProps {
   onLogout: () => void;
   onGoToVolunteerManagement: () => void;
@@ -176,10 +178,10 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                     <input 
                         type="text" 
-                        placeholder="ค้นหา V-ID เช่น V-2405..."
+                        placeholder="ค้นหา V-ID เช่น ก001"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-lg font-medium"
+                        className="placeholder-gray-400 text-gray-600 w-full pl-12 pr-4 py-3.5 rounded-2xl border border-gray-200 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all text-lg font-medium"
                     />
                 </div>
             </div>
@@ -200,7 +202,7 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
                     <tbody className="divide-y divide-gray-100">
                         {filteredPatients.map((patient) => (
                             <tr key={patient.id} className="hover:bg-blue-50/20 transition-colors group">
-                                <td className="p-6 font-black text-gray-900 text-lg">{patient.id}</td>
+                                <td className="p-6 font-black text-gray-900 text-lg">{patient.volunteersId}</td>
                                 <td className="p-6 text-gray-500 text-sm font-medium">{formatDate(patient.timestamp)}</td>
                                 <td className="p-6 text-gray-700 font-bold">
                                     <div className="flex flex-col">
@@ -225,15 +227,15 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
                                         {patient.status}
                                     </span>
                                 </td>
-                                <td className="p-6 text-right">
-                                    <button 
-                                        onClick={() => setSelectedPatient(patient)}
-                                        className="bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white p-3 rounded-2xl font-bold text-sm transition-all shadow-sm flex items-center gap-2 ml-auto"
+                               <td className="p-6 text-right">
+                                    <Link
+                                        href={`/dashboard/patient/${patient.id}`}
+                                        className="bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white p-3 rounded-2xl font-bold text-sm transition-all shadow-sm flex items-center gap-2 ml-auto w-fit"
                                     >
                                         <FileText size={20} />
                                         <span className="hidden md:inline">เปิดดู</span>
-                                    </button>
-                                </td>
+                                    </Link>
+                                    </td>
                             </tr>
                         ))}
                     </tbody>

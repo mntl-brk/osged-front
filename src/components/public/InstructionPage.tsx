@@ -9,7 +9,7 @@ interface InstructionPageProps {
 
 export const InstructionPage: React.FC<InstructionPageProps> = ({ onStart }) => {
 const instructionGuideText =
-  'ก่อนเริ่มทำแบบคัดกรองนะครับ การประเมินนี้จะใช้เวลาประมาณ 5 ถึง 10 นาที แนะนำให้อยู่ในที่เงียบและมีแสงสว่างเพียงพอ เมื่อพร้อมแล้ว กรุณากดปุ่ม เริ่มทำแบบคัดกรอง ด้านล่าง เพื่อเริ่มต้นครับ'
+  'ก่อนเริ่มทำแบบคัดกรองนะครับ. การประเมินนี้จะใช้เวลาประมาณ 10 ถึง 15 นาที แนะนำให้อยู่ในที่เงียบและมีแสงสว่างเพียงพอ เมื่อพร้อมแล้ว กรุณากดปุ่ม เริ่มทำแบบคัดกรอง ด้านล่าง เพื่อเริ่มต้นครับ'
 
 const { isSpeaking, replay } = useVoiceGuide(instructionGuideText)
   return (
@@ -28,7 +28,7 @@ const { isSpeaking, replay } = useVoiceGuide(instructionGuideText)
                 </div>
                 <div>
                     <span className="text-xl md:text-2xl font-medium text-gray-700 leading-relaxed block mt-2">
-                        ใช้เวลาประเมินประมาณ <span className="text-primary font-bold">5–10 นาที</span>
+                        ใช้เวลาประเมินประมาณ <span className="text-primary font-bold">10–15 นาที</span>
                     </span>
                 </div>
             </li>

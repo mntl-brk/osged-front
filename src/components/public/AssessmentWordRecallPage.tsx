@@ -1,9 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, StopCircle, Send, RotateCcw } from 'lucide-react';
-import { WordSet } from '../types';
-import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
-import { isAudioUnlocked } from '@/lib/audioUnlock';
-import { stopAudio } from '@/lib/audioManager';
+import { WordSet } from '@/types';
 import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 
@@ -25,7 +22,7 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
 
   /* ================= AI GUIDE ================= */
   const { status, isSpeaking, replay } = useVoiceGuide(
-      `ต่อไปนะครับ ขอให้พูดคำศัพท์ทั้งสามคำที่จำไว้ก่อนหน้านี้
+      `ต่อไปนะครับ ขอให้พูดคำทั้งสามคำที่จำไว้ก่อนหน้านี้
         พูดต่อเนื่องกันได้เลย ไม่ต้องรีบนะครับ
         เมื่อพร้อมแล้ว กดปุ่มไมค์สีแดงเพื่อเริ่มพูดครับ`,
   )
@@ -45,10 +42,10 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
   });
 
   const calculateScore = () => {
-    const targets = correctWordSet.words.map(w => w.trim());
-    const uniqueRecognized = Array.from(new Set(recognizedWords));
-
-    return uniqueRecognized.filter(w => targets.includes(w)).length;
+    const transcriptText = transcript.replace(/\s+/g, '');
+    return correctWordSet.words.filter(word =>
+      transcriptText.includes(word)
+    ).length;
   };
 
   const handleSubmit = () => {
@@ -125,7 +122,7 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
         <div className="text-center space-y-2  flex items-center justify-center">
           {isSpeaking ? (
             <p className="text-gray-400 animate-pulse font-semibold">
-              กำลังอธิบาย กรุณารอฟัง
+              กำลังอธิบาย
             </p>
           ) : isListening ? (
             <div className="flex items-center gap-3 bg-red-50 px-6 py-2 rounded-full border-2 border-red-200">
@@ -136,7 +133,7 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
             </div>
           ) : !isEvaluating ? (
             <p className="text-gray-400 italic text-sm px-4">
-              กดปุ่มแล้วพูดคำศัพท์ทั้ง 3 คำ ต่อเนื่องได้เลยครับ
+              กดปุ่มแล้วพูดคำทั้ง 3 คำ ต่อเนื่องได้เลยครับ
             </p>
           ) : null}
         </div>
@@ -179,7 +176,7 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
           {/* Send */}
           
         </div>
-          <p className="mt-2 text-gray-400 text-base">
+          <p className="mt-4 text-gray-400 text-base text-center">
             หากนึกไม่ออก สามารถกดส่งคำตอบได้เลยครับ
           </p>
       </div>

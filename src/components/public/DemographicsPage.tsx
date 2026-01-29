@@ -73,23 +73,23 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
 
         {/* 1. Location Question */}
         <div className="space-y-4">
-          <label className="block text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <MapPin className="text-primary"/> 1. ตอนนี้คุณกำลังทำแบบทดสอบอยู่ที่ไหน?
+          <label className=" md:text-2xl text-xl  font-bold text-gray-800 flex items-center gap-2">
+            <MapPin className="text-primary md:block hidden"/> 1. ตอนนี้คุณกำลังทำแบบทดสอบอยู่ที่ไหน?
           </label>
           <textarea
             value={locationDescription}
             onChange={(e) => setLocationDescription(e.target.value)}
             placeholder="ตัวอย่าง: ที่บ้านในกรุงเทพฯ หรือที่ศูนย์ดูแลผู้สูงอายุ..."
             className="
-              w-full p-6 text-2xl text-black placeholder-zinc-500 rounded-2xl border-4 border-gray-100 bg-gray-50 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none min-h-[120px]
+              w-full p-6 md:text-2xl text-xl  text-black placeholder-zinc-500 rounded-2xl border-4 border-gray-100 bg-gray-50 focus:bg-white focus:border-primary focus:ring-1 focus:ring-primary/10 transition-all outline-none min-h-[120px]
             "
           />
         </div>
 
         {/* 2. Age Input */}
         <div className="space-y-4">
-          <label className="block text-2xl  font-bold text-gray-800 flex items-center gap-2">
-            <Calendar className="text-primary"/> 2. อายุของคุณ (ปี)
+          <label className=" md:text-2xl text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Calendar className="text-primary md:block hidden"/> 2. อายุของคุณ (ปี)
           </label>
           <input
             type="number"
@@ -98,22 +98,22 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
             onChange={(e) => setAge(e.target.value)}
             placeholder="เช่น 70"
             className="
-              w-full max-w-[200px] p-5 text-2xl placeholder-zinc-500 text-black rounded-2xl border-4 border-gray-100 bg-gray-50 focus:bg-white focus:border-primary transition-all outline-none
+              w-full p-5 md:text-2xl text-xl placeholder-zinc-500 text-black rounded-2xl border-4 border-gray-100 bg-gray-50 focus:bg-white focus:border-primary transition-all outline-none
             "
           />
         </div>
         
         {/* 4. Education Level (NEW) */}
         <div className="space-y-4">
-          <label className="block text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <GraduationCap className="text-primary"/> 3. ระดับการศึกษา (โดยประมาณ)
+          <label className=" md:text-2xl text-xl font-bold text-gray-800 flex items-center gap-2">
+            <GraduationCap className="text-primary md:block hidden"/> 3. ระดับการศึกษา (โดยประมาณ)
           </label>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button
               onClick={() => setEducationLevel('below_p4')}
               className={`
-                p-6 rounded-3xl border-4 transition-all flex items-center justify-center h-24 text-xl md:text-2xl font-bold
+                p-6 rounded-3xl border-4 transition-all flex items-center justify-center h-24 md:text-2xl text-xl font-bold
                 ${educationLevel === 'below_p4'
                   ? 'bg-primary text-white border-primary shadow-lg'
                   : 'bg-white text-gray-500 border-gray-100 hover:border-primary/50'}
@@ -125,7 +125,7 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
             <button
               onClick={() => setEducationLevel('p4_or_above')}
               className={`
-                p-6 rounded-3xl border-4 transition-all flex items-center justify-center h-24 text-xl md:text-2xl font-bold
+                p-6 rounded-3xl border-4 transition-all flex items-center justify-center h-24 md:text-2xl text-xl font-bold
                 ${educationLevel === 'p4_or_above'
                   ? 'bg-primary text-white border-primary shadow-lg'
                   : 'bg-white text-gray-500 border-gray-100 hover:border-primary/50'}
@@ -138,8 +138,8 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
 
         {/* 3. Gender Selection */}
         <div className="space-y-4">
-          <label className="block text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Users className="text-primary"/> 4. เพศ
+          <label className="md:text-2xl text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Users className="text-primary md:block hidden"/> 4. เพศ
           </label>
           <div className="flex flex-wrap gap-4">
             {[
@@ -151,7 +151,7 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
                 key={option.id}
                 onClick={() => setGender(option.id as Gender)}
                 className={`
-                  flex-1 min-w-[140px] h-20 rounded-2xl text-2xl font-bold border-4 transition-all flex items-center justify-center gap-2
+                  flex-1 h-20 rounded-2xl md:text-2xl text-xl font-bold border-4 transition-all flex items-center justify-center gap-2
                   ${gender === option.id 
                     ? 'bg-primary text-white border-primary shadow-lg scale-105' 
                     : 'bg-white text-gray-500 border-gray-100 hover:border-primary/50'}
@@ -165,8 +165,8 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
 
         {/* 5. Location Type */}
         <div className="space-y-4">
-          <label className="block text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <Home className="text-primary"/> 5. ประเภทสถานที่ปัจจุบัน
+          <label className="md:text-2xl text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Home className="text-primary md:block hidden"/> 5. ประเภทสถานที่ปัจจุบัน
           </label>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
@@ -178,7 +178,7 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
                   : 'bg-white border-gray-100 text-gray-400 hover:text-primary'}
               `}
             >
-              <Home size={48} />
+              <Home size={42} />
               <span className="text-xl font-bold">ที่บ้าน</span>
             </button>
 

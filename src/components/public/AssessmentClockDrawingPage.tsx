@@ -1,10 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { ArrowRight, RotateCcw, ClockFading } from 'lucide-react';
-import { AssessmentProgress } from './AssessmentProgress';
-import { isAudioUnlocked } from '@/lib/audioUnlock';
-import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
-import { stopAudio } from '@/lib/audioManager';
+import { ArrowRight, RotateCcw, ClockFading, Trash2 } from 'lucide-react';
 import { useVoiceGuide } from '@/hooks/useVoiceGuide';
+import { useRequireLandscape } from '@/hooks/useRequireLandscape';
+import { RotateDeviceOverlay } from '../RotateDeviceOverlay';
+import { ClockDemoOverlay } from '../ClockDemoOverlay';
 
 interface AssessmentClockDrawingPageProps {
   onNext: (data: string) => void;
@@ -40,15 +39,27 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
       isPlaced: false,
     }))
   );
-
+  const hasPlayedVoiceRef = useRef(false);
+  const lastAngleRef = useRef<number | null>(null);
   const [hourHand, setHourHand] = useState<ClockHand>({ type: 'hour', angle: 0, isPlaced: false });
   const [minuteHand, setMinuteHand] = useState<ClockHand>({ type: 'minute', angle: 0, isPlaced: false });
   const [draggingId, setDraggingId] = useState<number | 'hour' | 'minute' | null>(null);
   const hasSpoken = useRef(false);
-  
-  const { status, isSpeaking, replay } = useVoiceGuide(
-    'ต่อไปจะเป็นการสร้างนาฬิกานะครับ กรุณาลากตัวเลขและเข็มนาฬิกา ทางกล่องด้านขวามือของหน้าจอ เพื่อบอกเวลา สิบเอ็ดนาฬิกา สิบ นาที ค่อย ๆ ทำ ไม่ต้องรีบครับ',
-  )
+  const [showDemo, setShowDemo] = useState(false);
+  const hasShownDemoRef = useRef(false);
+
+  const { isSpeaking } = useVoiceGuide(
+      'ต่อไปจะเป็นการสร้างนาฬิกานะครับ กรุณาลากตัวเลขและเข็มนาฬิกา ทางกล่องด้านขวามือของหน้าจอ เพื่อบอกเวลา สิบเอ็ดนาฬิกา สิบ นาที ค่อย ๆ ทำ ไม่ต้องรีบครับ',
+    {
+      autoPlay: true,
+      onEnd: () => {
+        if (!hasShownDemoRef.current) {
+          setShowDemo(true);
+          hasShownDemoRef.current = true;
+        }
+      },
+    }
+  );
 
   const pushHistory = () => {
     historyRef.current.push({
@@ -76,33 +87,59 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
     pushHistory();
     setDraggingId(id);
   };
-  
+
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!draggingId || !containerRef.current) return;
+
     const rect = containerRef.current.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    const clampedX = Math.max(0, Math.min(100, x));
-    const clampedY = Math.max(0, Math.min(100, y));
 
     if (typeof draggingId === 'number') {
-      setNumbers(prev => prev.map(n => 
-        n.value === draggingId ? { ...n, x: clampedX, y: clampedY, isPlaced: true } : n
-      ));
-    } else {
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const radians = Math.atan2(e.clientY - centerY, e.clientX - centerX);
-      let degrees = radians * (180 / Math.PI) + 90;
-      if (draggingId === 'hour') setHourHand(prev => ({ ...prev, angle: degrees, isPlaced: true }));
-      else setMinuteHand(prev => ({ ...prev, angle: degrees, isPlaced: true }));
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+      const clampedX = Math.max(0, Math.min(100, x));
+      const clampedY = Math.max(0, Math.min(100, y));
+
+      setNumbers(prev =>
+        prev.map(n =>
+          n.value === draggingId
+            ? { ...n, x: clampedX, y: clampedY, isPlaced: true }
+            : n
+        )
+      );
+      return; 
+    }
+
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    const radians = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+    let angle = (radians * 180) / Math.PI + 90;
+    if (angle < 0) angle += 360;
+
+    if (lastAngleRef.current === null) {
+      lastAngleRef.current = angle;
+      return;
+    }
+
+    let delta = angle - lastAngleRef.current;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+
+    lastAngleRef.current = angle;
+
+    if (draggingId === 'hour') {
+      setHourHand(prev => ({ ...prev, angle: prev.angle + delta }));
+    }
+
+    if (draggingId === 'minute') {
+      setMinuteHand(prev => ({ ...prev, angle: prev.angle + delta }));
     }
   };
-
-    
   const handlePointerUp = () => {
-    unlockScroll();     
+    unlockScroll();
     setDraggingId(null);
+    lastAngleRef.current = null;
   };
 
   const placeFromPalette = (id: number | 'hour' | 'minute') => {
@@ -111,15 +148,25 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
     pushHistory();
 
     if (typeof id === 'number') {
+      const safePos = getSafeInitialPosition();
+
       setNumbers(prev =>
         prev.map(n =>
-          n.value === id ? { ...n, x: 50, y: 50, isPlaced: true } : n
+          n.value === id
+            ? {
+                ...n,
+                x: safePos.x,
+                y: safePos.y,
+                isPlaced: true,
+              }
+            : n
         )
       );
+
       setDraggingId(id);
     } else {
-      if (id === 'hour') setHourHand(prev => ({ ...prev, isPlaced: true, angle: 0 }));
-      if (id === 'minute') setMinuteHand(prev => ({ ...prev, isPlaced: true, angle: 0 }));
+      if (id === 'hour') setHourHand({ type: 'hour', angle: 0, isPlaced: true });
+      if (id === 'minute') setMinuteHand({ type: 'minute', angle: 0, isPlaced: true });
     }
   };
 
@@ -202,32 +249,133 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
     return canvas.toDataURL('image/png');
   };
 
-  return (
-    <div 
-      className="w-full max-w-6xl mx-auto px-4 py-8 animate-fade-in flex flex-col items-center pb-24 select-none"
-      onPointerUp={handlePointerUp}
-      onPointerMove={handlePointerMove}
-    >
+  const isLandscape = typeof window !== 'undefined'
+  ? window.innerWidth > window.innerHeight
+  : false;
 
-      <h1 className="text-3xl md:text-5xl font-bold text-center mb-4 text-gray-900">
+  const isTouchDevice = typeof window !== 'undefined'
+    ? window.innerWidth < 1024
+    : false;
+    
+  const needLandscape = useRequireLandscape();
+  const isCompactLandscape = isLandscape && isTouchDevice;
+
+  const getSafeInitialPosition = () => {
+    if (!containerRef.current) return { x: 50, y: 58 };
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const offsetY = rect.height * 0.12; 
+
+    return {
+      x: (centerX / rect.width) * 100,
+      y: ((centerY + offsetY) / rect.height) * 100,
+    };
+  };
+
+  
+  return (
+    <>
+     {needLandscape && <RotateDeviceOverlay />}
+     {showDemo && (
+        <ClockDemoOverlay
+          onClose={() => {
+            setShowDemo(false);          
+          }}
+        />
+      )}
+
+      <div
+        className={`
+          w-full mx-auto
+          flex flex-col items-center
+          select-none 
+          ${
+            isCompactLandscape
+              ? 'px-2 py-2 overflow-hidden'
+              : 'max-w-6xl px-4 py-8 pb-24'
+          }
+        `}
+        onPointerUp={handlePointerUp}
+        onPointerMove={handlePointerMove}
+      >
+
+    <div className='mb-2 text-center'>
+      <h1
+        className={`
+          font-bold text-center text-gray-900
+          ${
+            isCompactLandscape
+              ? 'text-3xl mb-1'
+              : 'text-3xl md:text-5xl mb-4'
+          }
+        `}
+      >
         สร้างนาฬิกา
       </h1>
       
-      <p className="text-xl md:text-2xl text-gray-600 text-center mb-10">
-        ลากตัวเลขและเข็มนาฬิกา เพื่อบอกเวลา <span className="text-primary font-black text-3xl">11 โมง 10 นาที</span>
-      </p>
 
-      <div className="flex flex-col lg:flex-row w-full gap-10 items-start justify-center">
-          
-          <div className="w-full lg:w-3/5 flex justify-center">
-              <div
-                className="
-                  relative w-full max-w-[1200px]
-                  p-6 rounded-[48px]
-                  border-4 border-dashed border-gray-300
-                  bg-gray-50/60
-                  flex flex-col items-center
-                "
+        <p
+          className={`
+            text-center text-gray-600
+            ${
+              isCompactLandscape
+                ? 'text-lg mb-4'
+                : 'text-xl md:text-2xl mb-2'
+            }
+          `}
+        >
+          ลากตัวเลขและเข็มนาฬิกา เพื่อบอกเวลา
+          <span className="text-primary font-black ml-2">
+            11 โมง 10 นาที
+          </span>
+        </p>
+
+        <button
+            onClick={() => setShowDemo(true)}
+            className="
+              text-center
+
+              mt-2
+              text-base md:text-lg
+              text-primary
+              underline
+              underline-offset-4
+              font-semibold
+              hover:text-primaryHover
+              mb-2
+            "
+          >
+            ดูตัวอย่างอีกครั้ง
+        </button>
+
+      </div>
+
+        <div
+          className={`
+            grid w-full px-2
+            ${
+              isCompactLandscape
+                ? 'grid-cols-[3fr_2fr]'
+                : 'grid-cols-1 lg:grid-cols-[2fr_1fr]'
+            }
+            gap-2.5
+            items-stretch
+          `}
+        >
+                
+         <div className="w-full h-auto flex justify-center">
+             <div
+              className="
+                relative w-full
+                p-4 rounded-[48px]
+                border-3 border-dashed border-gray-200
+                bg-gray-50/60
+                flex flex-col items-center
+                h-full
+              "
               >        
                  {/* Label นำสายตา */}
                 <div className="
@@ -240,21 +388,24 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
                 </div>
 
                 {/* Clock wrapper */}
-                <div
-                  ref={containerRef}
-                  className="
+                  <div
+                  className={`
                     relative
-                    w-full max-w-[500px]
                     aspect-square
                     bg-white
                     rounded-full
-                    border-[10px] border-gray-900
-                    shadow-2xl
+                    border-[5px] border-gray-900
+                    shadow-xl
                     flex items-center justify-center
                     touch-none
-                  "
+                    ${
+                      isCompactLandscape
+                        ? 'w-[86vh] max-w-none'
+                        : 'w-full max-w-[500px]'
+                    }
+                  `}
+                  ref={containerRef}
                 >
-
 
                 {numbers.filter(n => n.isPlaced).map(n => (
                   <div
@@ -263,8 +414,8 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
                     style={{ left: `${n.x}%`, top: `${n.y}%` }}
                     className={`
                       absolute -translate-x-1/2 -translate-y-1/2
-                      w-14 h-14 flex items-center justify-center
-                      text-4xl font-black cursor-move
+                      w-12 h-12 flex items-center justify-center
+                      text-3xl font-black cursor-move
                       bg-white rounded-full select-none
                       ${draggingId === n.value ? 'scale-125 z-50 text-primary shadow-xl ring-4 ring-primary/20' : 'text-gray-900'}
                     `}
@@ -275,19 +426,45 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
 
               </div>
 
-           {/* Hour Hand */}
+
+            {/* Hour Hand */}
             {hourHand.isPlaced && (
               <div
                 onPointerDown={(e) => handlePointerDown(e, 'hour')}
-                className="absolute top-1/2 left-1/2 origin-left h-3 bg-black z-20 cursor-grab"
+                className={`
+                  absolute top-1/2 left-1/2
+                  origin-left
+                  z-20
+                  cursor-grab
+                  touch-none
+                  transition-all
+                  hover:scale-[1.04]
+                  hover:ring-4 hover:ring-primary/20
+                  ${draggingId === 'hour' ? 'scale-105 ring-4 ring-primary/30' : ''}
+                `}
                 style={{
-                  width: hourHand.isPlaced ? '15%' : '30%',
-                  transform: `rotate(${hourHand.angle - 90}deg) translateY(-50%)`,
-                }}
+                              width: hourHand.isPlaced ? '35%' : '55%',
+                              transform: `rotate(${hourHand.angle - 90}deg) translateY(-50%)`,
+                            }}
               >
-                <div className="absolute -right-3 top-1/2 -translate-y-1/2 
-                  border-l-[16px] border-l-black 
-                  border-y-[8px] border-y-transparent" />
+                {/* visual hand */}
+                <div
+                  className="absolute top-1/2 left-0 h-3 bg-black   
+                  transition-colors
+                  group-hover:bg-gray-800"
+                  style={{
+                    width: '35%',
+                    transform: 'translateY(-50%)',
+                  }}
+                >
+                  <div
+                    className="
+                      absolute -right-3 top-1/2 -translate-y-1/2 
+                      border-l-[16px] border-l-black 
+                      border-y-[8px] border-y-transparent
+                    "
+                  />
+                </div>
               </div>
             )}
 
@@ -295,31 +472,73 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
             {minuteHand.isPlaced && (
               <div
                 onPointerDown={(e) => handlePointerDown(e, 'minute')}
-                className="absolute top-1/2 left-1/2 origin-left h-3 bg-black z-30 cursor-grab"
+               className={`
+                  absolute top-1/2 left-1/2
+                  origin-left
+                  z-30
+                  cursor-grab
+                  touch-none
+                  transition-all
+                  hover:scale-[1.04]
+                  hover:ring-4 hover:ring-primary/20
+                  ${draggingId === 'minute' ? 'scale-105 ring-4 ring-primary/30' : ''}
+                `}
                 style={{
-                  width: minuteHand.isPlaced ? '22%' : '50%',
-                  transform: `rotate(${minuteHand.angle - 90}deg) translateY(-50%)`,
-                }}
+                        width: minuteHand.isPlaced ? '35%' : '60%',
+                        transform: `rotate(${minuteHand.angle - 90}deg) translateY(-50%)`,
+                      }}
               >
-                <div className="absolute -right-3 top-1/2 -translate-y-1/2 
-                  border-l-[16px] border-l-black 
-                  border-y-[8px] border-y-transparent" />
+                <div
+                  className="absolute top-1/2 left-0 h-3 bg-black transition-colors"
+                  style={{
+                    width: '55%',
+                    transform: 'translateY(-50%)',
+                  }}
+                >
+                  <div
+                    className="
+                      absolute -right-3 top-1/2 -translate-y-1/2 
+                      border-l-[16px] border-l-black 
+                      border-y-[8px] border-y-transparent
+                    "
+                  />
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        <div className="w-full lg:w-2/5 bg-gray-100 p-8 rounded-[40px] border-2 border-gray-200">
-            <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <ClockFading size={32}/> ชิ้นส่วนนาฬิกา
-            </h3>
+
+        <div
+          className={`
+            relative
+            bg-gray-100
+            h-full
+            rounded-[40px]
+            border-2 border-gray-200
+            w-full p-4
+          `}
+        >
+          {/* Floating label */}
+          <div
+            className="
+              absolute -top-4 left-8
+              bg-gray-100 px-4 py-1
+              text-lg font-semibold text-gray-500
+              rounded-full
+              flex items-center gap-2
+            "
+          >
+            <ClockFading size={20} />
+            ชิ้นส่วนนาฬิกา
+          </div>
             
-           <div className="flex gap-4 mb-8">
+           <div className="flex gap-4 mb-4 mt-2">
               {!hourHand.isPlaced && (
                 <button
                   onPointerDown={() => placeFromPalette('hour')}
-                  className="flex-1 h-16 bg-white rounded-3xl
-                    flex items-center justify-center border-4
+                  className="flex-1 h-14 bg-white rounded-2xl
+                    flex items-center justify-center
                     hover:border-primaryHover shadow-md active:scale-95 transition-all"
                 >
                   <div className="relative flex items-center">
@@ -338,8 +557,8 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
               {!minuteHand.isPlaced && (
                 <button
                   onPointerDown={() => placeFromPalette('minute')}
-                  className="flex-1 h-16 bg-white rounded-3xl
-                    flex items-center justify-center border-4
+                  className="flex-1 h-14 bg-white rounded-2xl
+                    flex items-center justify-center
                     hover:border-primaryHover shadow-md active:scale-95 transition-all"
                 >
                   <div className="relative flex items-center">
@@ -356,7 +575,7 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
               )}
             </div>
 
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-4 gap-2">
                 {numbers.map((n) => (
                     <button
                         key={n.value}
@@ -374,15 +593,19 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
                 ))}
             </div>
 
-           <div className="mt-8 grid grid-cols-2 gap-4">
+        </div>
+
+      </div>
+
+      <div className="mt-6 grid grid-cols-2 gap-2 w-full max-w-sm mb-4">
               <button
                 onClick={handleReset}
                 className="py-4 text-red-500 font-bold text-xl 
-                  hover:bg-red-50 rounded-2xl 
+                  hover:bg-red-50 bg-white rounded-2xl 
                   flex items-center justify-center gap-2 
-                  border-2 border-dashed border-red-200"
+                  border-2 border-red-200"
               >
-                <RotateCcw size={24} /> ล้างกระดาน
+                <Trash2 size={24}/>ล้างกระดาน
               </button>
 
              <button
@@ -390,18 +613,15 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
                 disabled={historyRef.current.length === 0}
                 className="py-4 text-gray-700 font-bold text-xl 
                   hover:bg-gray-200 rounded-2xl 
-                  flex items-center justify-center gap-2 
-                  border-2 border-dashed border-gray-300
+                  flex items-center bg-white justify-center gap-2 
+                  border-2 border-gray-300
                   disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                ← ย้อนกลับ
+                <RotateCcw size={24} />  ย้อนกลับ
               </button>
-            </div>
-        </div>
+          </div>
 
-      </div>
-
-      <div className="mt-14 w-full max-w-sm">
+     <div className={`${isCompactLandscape ? 'mt-2' : 'mt-14'} w-full max-w-sm`}>
        <button
           onClick={() => {
             if (isSpeaking) return;
@@ -425,5 +645,6 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
       </div>
 
     </div>
+  </>  
   );
 };

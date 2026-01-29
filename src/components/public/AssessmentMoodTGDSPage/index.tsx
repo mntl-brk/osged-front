@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { TGDS_QUESTIONS } from '@/data/tgdsQuestions';
-import { TGDSReadingPage } from './TGDSReadingPage';
 import { TGDSAnswerPage } from './TGDSAnswerPage';
 import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 

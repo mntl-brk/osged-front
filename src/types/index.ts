@@ -33,6 +33,7 @@ export interface AssessmentData {
 
 export interface PatientRecord {
   id: string;
+  volunteersId: string;
   timestamp: string;
   demographics: DemographicsData;
   miniCog: {

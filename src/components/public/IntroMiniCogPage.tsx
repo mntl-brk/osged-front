@@ -12,11 +12,11 @@ export const IntroMiniCogPage: React.FC<IntroMiniCogPageProps> = ({ onStart }) =
         ต่อไปจะเป็นการทดสอบความจำและการรู้คิดนะครับ
         แบบทดสอบนี้มีทั้งหมด 3 ขั้นตอน
 
-        ขั้นแรก ผมจะให้ท่านฟังและพยายามจำคำศัพท์จำนวน 3 คำ
+        ขั้นแรก ผมจะให้ท่านฟังและพยายามจำคำ 3 คำ
         ขั้นที่สอง จะให้ท่านวาดรูปหน้าปัดนาฬิกา
-        และขั้นสุดท้าย จะขอให้ท่านบอกคำศัพท์ทั้ง 3 คำที่จำไว้จากขั้นตอนแรกนะครับ
+        และขั้นสุดท้าย จะขอให้ท่านบอกคำ 3 คำที่จำไว้จากขั้นตอนแรกนะครับ
 
-        ไม่ต้องกังวลนะครับ ทำเท่าที่ทำได้ ไม่มีถูกหรือผิด
+        ไม่ต้องกังวลนะครับ ทำเท่าที่ทำได้
         หากพร้อมแล้ว กรุณากดปุ่มด้านล่างเพื่อเริ่มทำแบบทดสอบได้เลยครับ
       `
   )
@@ -33,8 +33,8 @@ export const IntroMiniCogPage: React.FC<IntroMiniCogPageProps> = ({ onStart }) =
         ส่วนที่ 1: การประเมินสมอง
       </h1>
       
-      <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-xl leading-relaxed">
-        ในส่วนนี้จะเป็นการทดสอบ <span className="text-primary font-bold">ความจำ</span> และ <span className="text-primary font-bold">การรู้คิด</span> (Mini-Cog)
+      <p className="text-lg md:text-2xl text-gray-600 mb-8 max-w-xl leading-relaxed">
+        ในส่วนนี้จะเป็นการทดสอบ <span className="text-primary font-bold">ความจำ</span> และ <span className="text-primary font-bold">การรู้คิด</span>
       </p>
 
       <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-10 w-full max-w-lg text-left">
@@ -42,7 +42,7 @@ export const IntroMiniCogPage: React.FC<IntroMiniCogPageProps> = ({ onStart }) =
         <ul className="space-y-3 text-lg text-gray-600">
             <li className="flex items-center gap-3">
                 <span className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">1</span>
-                ฟังและจำคำศัพท์ 3 คำ
+                ฟังและจำคำ 3 คำ
             </li>
             <li className="flex items-center gap-3">
                 <span className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">2</span>
@@ -50,7 +50,7 @@ export const IntroMiniCogPage: React.FC<IntroMiniCogPageProps> = ({ onStart }) =
             </li>
             <li className="flex items-center gap-3">
                 <span className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">3</span>
-                บอกคำศัพท์ทั้ง 3 คำที่จำไว้จากขั้นตอนแรก
+                บอกคำ 3 คำที่จำไว้จากขั้นตอนแรก
             </li>
         </ul>
       </div>

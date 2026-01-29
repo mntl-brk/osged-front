@@ -35,7 +35,7 @@ export const IntroTGDSPage: React.FC<IntroTGDSPageProps> = ({ onStart }) => {
       <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-xl leading-relaxed">
         ในส่วนถัดไปจะเป็นแบบสอบถามเกี่ยวกับ
         <span className="text-red-500 font-bold"> ความรู้สึก </span>
-        ของท่านในช่วงสัปดาห์ที่ผ่านมา (TGDS-15)
+        ของท่านในช่วงสัปดาห์ที่ผ่านมา
       </p>
 
       {/* Instruction Box */}

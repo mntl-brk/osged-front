@@ -67,27 +67,27 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
       </div>
 
       {/* ================= Question ================= */}
-      <div className="flex-grow flex flex-col justify-center mb-8 mt-6">
+      <div className="flex-grow flex flex-col justify-center mb-10 md:mb-2 mt-6">
         <div
           className="
             relative bg-white border-[6px] border-primary
             rounded-[40px] p-8 md:p-12
-            shadow-2xl text-center
+            shadow-xl text-center
           "
         >
           <div
             className="
-              absolute -top-10 left-1/2 -translate-x-1/2
+              absolute -top-5 left-1/2 -translate-x-1/2
               px-4 py-2 rounded-full
               bg-primary text-white
-              font-black text-lg shadow-lg
-              
+              font-black text-base shadow-lg
+              w-full md:w-auto
             "
           >
-            อ่านคำถามแล้วตอบ "ใช่" หรือ "ไม่ใช่" ได้เลย
+            อ่านคำถามแล้วตอบ "ใช่" หรือ "ไม่ใช่"
           </div>
 
-          <p className="text-4xl md:text-5xl font-black text-gray-900 leading-tight">
+          <p className="text-3xl md:text-5xl font-black text-gray-900 leading-tight">
             {questionText}
           </p>
         </div>
@@ -97,11 +97,11 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
       <div className="mb-8">
         {/* มีคำตอบแล้ว */}
         {hasFinalAnswer && (
-          <div className="p-8 rounded-[32px] border-4 bg-white border-green-300 shadow-inner text-center min-h-[140px] flex flex-col items-center justify-center animate-fade-in">
-            <span className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-2">
+          <div className="p-6 rounded-[32px] md:h-[140px] h-[100px] border-4 bg-white border-green-300 shadow-inner text-center flex flex-col items-center justify-center animate-fade-in">
+            <span className="text-sm md:text-base font-bold text-gray-500 uppercase tracking-widest mb-4">
               คำตอบของท่าน
             </span>
-            <p className="text-5xl font-black text-green-700">
+            <p className="text-4xl md:text-5xl font-black text-green-700">
               {finalAnswerText}
             </p>
           </div>
@@ -109,7 +109,7 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
 
         {/* กำลังฟัง */}
         {!hasFinalAnswer && isListening && (
-          <div className="p-8 rounded-[32px] border-4 bg-red-50 border-red-200 text-center min-h-[140px] flex flex-col items-center justify-center animate-fade-in">
+          <div className="p-6 rounded-[32px] border-4 bg-red-50 border-red-200 text-center md:h-[140px] h-[100px] flex flex-col items-center justify-center animate-fade-in">
             <span className="text-xl font-black text-red-600 mb-4">
               กำลังฟังเสียงของท่าน
             </span>
@@ -119,7 +119,7 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
 
         {/* ยังไม่เริ่ม */}
         {!hasFinalAnswer && !isListening && (
-          <div className="p-8 rounded-[32px] border-4 border-dashed border-gray-200 text-center text-gray-400 font-bold text-xl h-[140px] flex items-center justify-center">
+          <div className="p-6 rounded-[32px] border-4 border-dashed border-gray-200 text-center text-gray-400 font-bold text-xl md:h-[140px] h-[100px] flex items-center justify-center">
             ตอบว่า “ใช่” หรือ “ไม่ใช่”
           </div>
         )}
@@ -133,7 +133,7 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
           <button
             onClick={onToggleListening}
             className={`
-              w-full py-8 rounded-[35px]
+              w-full py-6 rounded-[35px]
               flex items-center justify-center gap-6
               text-4xl font-black shadow-2xl transition-all
               ${
@@ -145,12 +145,12 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
           >
             {isListening ? (
               <>
-                <StopCircle size={56} />
+                <StopCircle size={38} />
                 กดเมื่อพูดจบ
               </>
             ) : (
               <>
-                <Mic size={56} />
+                <Mic size={38} />
                 พูด
               </>
             )}
@@ -159,21 +159,21 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
 
         {/* After detected answer */}
         {!isListening && hasDetectedAnswer && (
-          <div className="flex gap-4 w-full animate-fade-in-up">
+          <div className="flex gap-2 w-full animate-fade-in-up">
             <button
               onClick={onResetAnswer}
-              className="flex-1 bg-white border-4 border-gray-300 text-gray-600 px-2 rounded-[30px] text-2xl font-bold flex items-center justify-center gap-3 hover:bg-gray-50 transition-all"
+              className="flex-1 bg-white border-4 border-gray-300 text-gray-600 px-2 rounded-[30px] text-xl md:text-3xl font-bold flex items-center justify-center gap-2 hover:bg-gray-50 transition-all"
             >
-              <RotateCcw size={32} />
+              <RotateCcw className='h-12' />
               พูดใหม่
             </button>
 
             <button
               onClick={onSubmitAnswer}
-              className="flex-[2] bg-gray-900 text-white py-6 rounded-[30px] text-3xl font-black flex items-center justify-center gap-4 hover:bg-black shadow-xl transition-all"
+              className="flex-[2] bg-gray-900 text-white py-4 rounded-[30px] text-xl md:text-3xl font-black flex items-center justify-center gap-2 hover:bg-black shadow-xl transition-all"
             >
               <span>ส่งคำตอบ</span>
-              <Send size={36} />
+              <Send className='h-12' />
             </button>
           </div>
         )}

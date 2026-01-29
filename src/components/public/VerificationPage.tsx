@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ShieldCheck, ArrowRight } from 'lucide-react';
 import { unlockAudio } from '@/lib/audioUnlock';
+import { verifyParticipantCode } from '@/api/participant/verifyParticipant';
+import { sleep } from '@/hooks/useSleepPage';
 
 interface VerificationPageProps {
   onSubmit: (code: string) => void;
@@ -8,13 +10,29 @@ interface VerificationPageProps {
 
 export const VerificationPage: React.FC<VerificationPageProps> = ({ onSubmit }) => {
   const [code, setCode] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleContinue = () => {
-    if (!code.trim()) {
-      alert('กรุณากรอกรหัสยืนยันอาสาสมัคร');
-      return;
+  const handleContinue = async () => {
+    if (!code.trim() || isLoading) return;
+
+    setIsLoading(true);
+
+    try {
+      await sleep(500);
+
+      const result = await verifyParticipantCode({ code });
+
+      result.match(
+        (participant) => {
+          onSubmit(participant.id);
+        },
+        () => {
+          alert('รหัสไม่ถูกต้อง หรือถูกใช้งานไปแล้ว');
+        }
+      );
+    } finally {
+      setIsLoading(false);
     }
-    onSubmit(code);
   };
 
   return (
@@ -27,15 +45,16 @@ export const VerificationPage: React.FC<VerificationPageProps> = ({ onSubmit }) 
         ยืนยันตัวตนอาสาสมัคร
       </h1>
       
-      <p className="text-xl md:text-2xl text-gray-600 text-center mb-12 leading-relaxed font-medium">
+      <p className="text-base md:text-2xl text-gray-600 text-center mb-10 leading-relaxed font-medium">
         กรุณากรอกรหัส <span className="text-primary font-black">กXXX</span> ที่ท่านได้รับจากแพทย์<br/>
         หรือผู้ดูแลโครงการ เพื่อเริ่มต้นการประเมิน
       </p>
 
-      <div className="w-full max-w-sm mb-12">
+      <div className="w-full max-w-sm mb-8">
         <input 
           type="text"
           value={code}
+          disabled={isLoading}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
           placeholder="กXXX"
           className="
@@ -45,28 +64,36 @@ export const VerificationPage: React.FC<VerificationPageProps> = ({ onSubmit }) 
             focus:border-primary focus:bg-white focus:ring-8 focus:ring-primary/5
             outline-none transition-all
             placeholder:text-gray-400 placeholder:text-2xl placeholder:tracking-normal placeholder:font-bold
+            disabled:opacity-60
           "
         />
       </div>
 
-      <button 
-           onClick={async () => {
-                  await unlockAudio().catch(e => console.log('unlock error', e));
-                  handleContinue();
-            }}
-                     
-        className="
+      <button
+        disabled={isLoading}
+        onClick={async () => {
+          await unlockAudio().catch(() => {});
+          handleContinue();
+        }}
+        className={`
           w-full max-w-sm
           bg-primary hover:bg-primaryHover text-white 
           py-6 px-10 rounded-[35px] 
           text-3xl font-black 
-          shadow-2xl shadow-primary/20 hover:-translate-y-2
+          shadow-2xl shadow-primary/20
           transform transition-all duration-300
           flex items-center justify-center gap-4
-        "
+          ${isLoading ? 'opacity-80 cursor-not-allowed' : 'hover:-translate-y-2'}
+        `}
       >
-        <span>ยืนยันรหัส</span>
-        <ArrowRight size={40} strokeWidth={4} />
+        {isLoading ? (
+          <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <>
+            <span>ยืนยันรหัส</span>
+            <ArrowRight size={40} strokeWidth={4} />
+          </>
+        )}
       </button>
 
       <p className="mt-12 text-gray-400 font-bold text-sm text-center italic">

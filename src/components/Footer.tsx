@@ -16,7 +16,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenInfo, onOpenFAQ, onOpenPDP
         <div className="text-center md:text-left">
           <h3 className="text-xl font-bold mb-2">OSGED Project</h3>
           <p className="text-gray-400 text-sm mb-4">
-            © 2024 Research Team. All rights reserved.
+            © 2026 Research Team. All rights reserved.
           </p>
           {onOpenDoctorPortal && (
             <button 

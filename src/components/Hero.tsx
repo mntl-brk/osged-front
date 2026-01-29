@@ -20,9 +20,8 @@ export const Hero: React.FC<HeroProps> = ({ onStart, onOpenInfo, onOpenPDPA }) =
       {/* 2. Description - Simple language, readable */}
       <div className="text-lg md:text-2xl text-gray-600 font-medium mb-10 max-w-2xl leading-relaxed">
         <p>ช่วยประเมินเบื้องต้นด้านความจำ การคิด และอารมณ์</p>
-        <p>เหมาะสำหรับผู้สูงอายุและผู้ดูแล</p>
         <p className="mt-2 text-gray-500 text-base md:text-xl">
-          (ใช้เวลาทำประมาณ 5–10 นาที)
+          (ใช้เวลาทำประมาณ 10-15 นาที)
         </p>
       </div>
 
@@ -43,15 +42,12 @@ export const Hero: React.FC<HeroProps> = ({ onStart, onOpenInfo, onOpenPDPA }) =
         "
         aria-label="เริ่มทำแบบคัดกรอง"
       >
-        <span>เริ่มคัดกรองสำหรับผู้สูงอายุ</span>
+        <span>เริ่มคัดกรอง</span>
         <ArrowRight size={28} strokeWidth={3} />
       </button>
 
       {/* 4. PDPA & Disclaimer - Smaller text but readable, clear links */}
       <div className="text-sm md:text-base text-gray-500 bg-gray-50 p-4 rounded-lg">
-        <p className="mb-1">
-          การกด “เริ่มคัดกรองสำหรับผู้สูงอายุ” ถือว่าท่านได้อ่านและยอมรับ
-        </p>
         <div className="flex flex-wrap justify-center gap-x-2 gap-y-1">
           <button 
             onClick={onOpenInfo}

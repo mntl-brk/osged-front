@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Volume2, ArrowRight, RefreshCcw, Mic, StopCircle, CheckCircle, XCircle, Send, RotateCcw, VolumeX } from 'lucide-react';
+import { Volume2, ArrowRight, RefreshCcw, Mic, StopCircle, CheckCircle, XCircle, Send, RotateCcw, VolumeX, Loader } from 'lucide-react';
 import { WordSet } from '@/types';
 import { stopAudio } from '@/lib/audioManager';
 import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
@@ -56,7 +56,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     const {
       isSpeaking: isGuideSpeaking,
     } = useVoiceGuide(
-        'ต่อไปเป็นการจำคำศัพท์ ผมจะอ่านคำศัพท์สามคำให้ฟัง ขอให้ตั้งใจฟังและจำคำเหล่านั้นไว้นะครับ เมื่อพร้อมแล้ว กดปุ่มลำโพงได้เลยครับ',
+        'ต่อไปเป็นการจำคำ ผมจะอ่านคำสามคำให้ฟัง ขอให้ตั้งใจฟังและจำคำเหล่านั้นไว้นะครับ เมื่อพร้อมแล้ว กดปุ่มลำโพงได้เลยครับ',
       {
         autoPlay: true,
         allowReplay: true,
@@ -112,11 +112,13 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     if (isEncouraging) return; 
 
     const textToSpeak = `
-      ครั้งนี้ยังไม่ถูกต้องครับ ไม่เป็นไรนะครับ เดี๋ยวเราลองใหม่กันอีกครั้งนะครับ 
-      มาครับลองกันอีกรอบ
-      คำที่หนึ่งคือ ${wordSet.words[0]}
-      คำที่สองคือ ${wordSet.words[1]}
-      และคำสุดท้ายคือ ${wordSet.words[2]}
+    ครั้งนี้ยังไม่ถูกต้องครับ… ไม่เป็นไรนะครับ…
+    เดี๋ยวเราลองใหม่กันอีกครั้งนะครับ…
+    ผมจะพูดให้ฟังอีกครั้งนะครับ
+
+    คำที่หนึ่งคือ ${wordSet.words[0]}
+    คำที่สองคือ ${wordSet.words[1]}
+    และคำสุดท้ายคือ ${wordSet.words[2]}
     `;
 
     setIsPlaying(true);
@@ -155,7 +157,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
   const showPlayButton = !hasPlayedAudio;
   const showMicSection = hasPlayedAudio && !completed;
   const showNextButton = completed;
-  const textshowMicSection = 'ขอให้พูดคำศัพท์ทั้งสามคำที่ได้ยินเมื่อครู่นี้นะครับ พูดต่อเนื่องกันทั้ง 3 คำได้เลย ไม่ต้องหยุดรอ เมื่อพูดครบแล้ว กดปุ่มส่งคำตอบได้เลยครับ';
+  const textshowMicSection = 'ขอให้พูดคำทั้งสามคำที่ได้ยินเมื่อครู่นี้นะครับ พูดต่อเนื่องกันทั้ง 3 คำได้เลย ไม่ต้องหยุดรอ เมื่อพูดครบแล้ว กดปุ่มส่งคำตอบได้เลยครับ';
   const [hasPlayedMicGuide, setHasPlayedMicGuide] = useState(false);
 
   const {
@@ -190,7 +192,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
 
     if (completeStatus === 'correct') {
       text = `
-        เยี่ยมมากครับ คุณจำคำศัพท์ได้ถูกต้องครบทั้งสามคำ
+        เยี่ยมมากครับ คุณจำคำได้ถูกต้องครบทั้งสามคำ
         อย่าลืมจำคำเหล่านี้ไว้นะครับ
         เดี๋ยวผมจะกลับมาถามใหม่อีกครั้ง
       `;
@@ -199,7 +201,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     if (completeStatus === 'attempted') {
       text = `
         ขอบคุณมากนะครับที่ตั้งใจทำแบบทดสอบ
-        อย่าลืมจำคำศัพท์เหล่านี้ไว้นะครับ
+        อย่าลืมจำคำเหล่านี้ไว้นะครับ
         เดี๋ยวผมจะกลับมาถามใหม่อีกครั้ง
       `;
     }
@@ -327,10 +329,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
                 </button>
                 <div className="text-center">
                     <p className="text-3xl font-bold text-gray-800 mb-2 mt-12">
-                        {isPlaying ? 'กำลังอ่านคำศัพท์ให้ฟัง...' : 'กดปุ่มสีฟ้าเพื่อเริ่มฟังคำศัพท์'}
-                    </p>
-                    <p className="text-red-500 text-lg">
-                        ฟังได้เพียงครั้งเดียวเท่านั้น โปรดตั้งใจฟัง
+                        {isPlaying ? 'กำลังอ่านคำให้ฟัง...' : 'กดปุ่มสีฟ้าเพื่อเริ่มฟังคำ'}
                     </p>
                 </div>
 
@@ -408,7 +407,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
           <div className="min-h-[56px] flex items-center justify-center text-center">
             {isMicGuideSpeaking ? (
               <span className="text-gray-500 text-lg font-semibold animate-pulse">
-                กำลังอธิบาย กรุณารอฟัง
+                กำลังอธิบาย
               </span>
             ) : isListening ? (
               <div className="flex items-center gap-3 bg-red-50 px-6 py-2 rounded-full border-2 border-red-200">
@@ -419,7 +418,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
               </div>
             ) : (
               <span className="text-gray-400 text-base italic px-4">
-                กดปุ่มแล้วพูดคำศัพท์ทั้ง 3 คำ ต่อเนื่องได้เลยครับ
+                กดปุ่มแล้วพูดคำทั้ง 3 คำ ต่อเนื่องได้เลยครับ
               </span>
             )}
           </div>
@@ -435,7 +434,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
                   start();
                 }
               }}
-            disabled={isAiSpeaking}
+            disabled={isAiSpeaking || isEvaluating}
             className={`
               w-44 h-44 rounded-full
               flex flex-col items-center justify-center
@@ -445,29 +444,35 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
                   ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   : isListening
                     ? 'bg-red-600 text-white animate-pulse'
+                    :isEvaluating
+                    ? 'bg-green-500 text-white animate-pulse'
                     : 'bg-red-500 text-white hover:scale-105 active:scale-95'
               }
             `}
           >
-            {isAiSpeaking ? (
+            {isAiSpeaking || isEvaluating ? (
                 <Volume2 size={72} className="animate-pulse" />
               ) : isListening ? (
                 <StopCircle size={72} />
-              ) : (
-                <Mic size={72} />
-              )}
+              ) : isEvaluating ? (
+                <Loader size={72} />
+              )
+                : <Mic size={72} /> 
+              }
 
               <span className="text-lg font-black mt-3">
                 {isAiSpeaking
                   ? 'กำลังอธิบาย กรุณารอฟัง'
                   : isListening
                     ? 'กดเมื่อพูดครบแล้ว'
+                    : isEvaluating
+                    ? 'กำลังเช็คคำตอบ'
                     : 'กดเพื่อพูด'}
               </span>
           </button>
 
           {/* ===== Helper Text ===== */}
-            <p className="text-gray-400 text-center text-base px-4">
+            <p className="text-gray-400 text-center text-base px-4 mt-4">
               พูดเสร็จแล้วกดปุ่มอีกครั้งได้เลย ระบบจะตรวจสอบให้ทันที
             </p>
 
@@ -481,11 +486,11 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
               <CheckCircle size={56} className="text-blue-500" />
             </div>
 
-            <p className="text-4xl font-bold text-blue-600 text-center">
+            <p className="text-2xl font-bold text-blue-600 text-center">
               ทำครบตามขั้นตอนแล้วครับ
             </p>
 
-            <p className="text-2xl text-gray-600 text-center max-w-md">
+            <p className="text-xl text-gray-600 text-center max-w-md">
               ขอบคุณที่ตั้งใจทำแบบทดสอบนะครับ อย่าลืมจำคำเหล่านี้ไว้
             </p>
 
@@ -495,9 +500,9 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
               className={`
                 mt-4
                 w-full max-w-sm
-                h-24
+                h-20
                 rounded-3xl
-                text-3xl
+                text-2xl
                 font-black
                 shadow-2xl
                 flex items-center justify-center gap-4
@@ -519,19 +524,19 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
           <div className="mt-42 flex flex-col items-center gap-6 animate-fade-in">
             <CheckCircle size={96} className="text-green-500" />
 
-            <p className="text-4xl font-bold text-green-600">
+            <p className="text-3xl font-bold text-green-600">
               เยี่ยมมากครับ 🎉
             </p>
 
-            <p className="text-2xl text-gray-600 text-center">
-              คุณจำคำศัพท์ได้ถูกต้องครบทั้งสามคำ อย่าลืมจำคำเหล่านี้ไว้
+            <p className="text-xl text-gray-600 text-center">
+              คุณจำคำได้ถูกต้องครบทั้งสามคำ อย่าลืมจำคำเหล่านี้ไว้
             </p>
 
            <button
               onClick={onNext}
               disabled={isBlocked}
               className={`
-                mt-4 w-full max-w-sm h-24 rounded-3xl text-3xl font-black
+                mt-4 w-full max-w-sm h-20 rounded-3xl text-2xl font-black
                 flex items-center justify-center gap-4
                 transition-all
                 ${

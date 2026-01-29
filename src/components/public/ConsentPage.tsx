@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FileText, Camera, Mic, Check, ArrowRight, Video, AlertCircle, PlayCircle, StopCircle, RefreshCcw } from 'lucide-react';
-import { stopAudio } from '@/lib/audioManager';
 import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 import { useCameraRecorder } from '@/hooks/useCameraRecorder';
+import { createSession } from '@/api/sessions/createSession';
+import { useAssessmentStore } from '@/store/assessmentStore';
+import { sleep } from '@/hooks/useSleepPage';
 
 interface ConsentPageProps {
   onNext: () => void;
@@ -10,18 +12,21 @@ interface ConsentPageProps {
 
 export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
   const [consent, setConsent] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const hasSpoken = useRef(false)
+  const [isLoading, setIsLoading] = useState(false);
+  
   const consentGuideText =
     'สวัสดีครับ ต่อไปเป็นขั้นตอนการให้ความยินยอมในการเข้าร่วมการทดสอบนะครับ กรุณากดปุ่ม เริ่มอัดคลิป ก่อน เมื่อเริ่มอัดแล้ว ให้ค่อย ๆ อ่านเงื่อนไขการเก็บรวบรวมข้อมูล ในกรอบด้านบนออกเสียงให้ครบถ้วน เมื่ออ่านเสร็จแล้ว กดปุ่มหยุดบันทึก จากนั้น ติ๊กช่องยินยอมด้านล่าง แล้วกดปุ่มถัดไปได้เลยครับ'
 
   const { isSpeaking, replay } = useVoiceGuide(consentGuideText)
 
+  const participantId = useAssessmentStore((s) => s.participantId)
+  const setSessionId = useAssessmentStore((s) => s.setSessionId)
+  
   const {
     videoRef,
     isRecording,
     hasRecorded,
+    recordedBlob,
     cameraError,
     startCamera,
     startRecording,
@@ -36,58 +41,95 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
   }, []);
 
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    await sleep(500);
+    
     if (!consent) {
-        alert('กรุณากดยอมรับเงื่อนไขการเก็บรวบรวมข้อมูล');
-        return;
+        alert('กรุณากดยอมรับเงื่อนไขการเก็บรวบรวมข้อมูล')
+        return
     }
-    // Optional: Enforce recording
-    if (!hasRecorded && !cameraError) {
-        alert('กรุณากดอัดวิดีโอเพื่อยืนยันตัวตนและทดสอบอุปกรณ์');
-        return;
+
+    if (!participantId) {
+        alert('ไม่พบข้อมูลผู้เข้าร่วม')
+        return
     }
-    onNext();
-  };
+
+    if (!recordedBlob) {
+        alert('กรุณาอัดวิดีโอยินยอม')
+        return
+    }
+
+    try{
+        //  สร้าง session
+        const result = await createSession({ participant_id: participantId })
+
+        result.match(
+            async (session) => {
+            setSessionId(session.session_id)
+
+            const formData = new FormData()
+            formData.append('file', recordedBlob, 'consent.webm')
+
+            const uploadRes = await fetch(
+                `/api/media/consent/${session.session_id}`,
+                {
+                method: 'POST',
+                body: formData,
+                }
+            )
+
+            if (!uploadRes.ok) {
+                alert('อัปโหลดวิดีโอไม่สำเร็จ')
+                return
+            }
+
+            onNext()
+            },
+            () => {
+            alert('ไม่สามารถเริ่มการประเมินได้')
+            }
+        )
+    } finally {
+         setIsLoading(false);
+        }
+    };
 
   return (
     <div className="w-full max-w-3xl mx-auto px-6 py-8 animate-fade-in pb-32">
       
       <h1 className="text-3xl md:text-4xl font-bold text-center mb-8 text-gray-800">
-        การให้ความยินยอมและเตรียมความพร้อม
+        การให้ความยินยอม
       </h1>
 
-      <div className="space-y-8">
+      <div className="space-y-5">
         
         {/* 1. PDPA Information */}
-        <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100">
-            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <FileText className="text-primary"/> 
-                เงื่อนไขการเก็บรวบรวมข้อมูล (Online Consent)
+        <div className="bg-blue-50 rounded-2xl md:p-6 p-3 border border-blue-100">
+            <h3 className="md:text-xl text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <FileText className="text-primary md:block hidden"/> 
+                เงื่อนไขการเก็บรวบรวมข้อมูล
             </h3>
             
-            <div className="bg-white p-4 rounded-xl border border-gray-200 text-gray-600 text-base h-40 overflow-y-auto shadow-inner mb-2 leading-relaxed">
-                <p className="mb-2 font-medium text-gray-800">ข้าพเจ้ายินยอมให้โครงการ OSGED ดำเนินการดังนี้:</p>
-                <ul className="list-disc pl-5 space-y-2 mb-4">
-                    <li>เก็บรวบรวมข้อมูลส่วนบุคคลทั่วไป (ที่อยู่, อายุ, เพศ)</li>
-                    <li><strong>บันทึกภาพและเสียงวิดีโอ </strong> ตลอดการทำแบบทดสอบเพื่อนำไปวิเคราะห์ผลทางการแพทย์</li>
+            <div className="bg-white p-4 rounded-xl border border-gray-200 text-gray-600 text-base h-40 overflow-y-auto shadow-inner leading-relaxed">
+                <p className="mb-2 font-medium text-gray-800">ข้าพเจ้ายินยอมให้โครงการดำเนินการดังนี้</p>
+                <ul className="list-disc pl-5 space-y-2 mb-2">
+                    <li>เก็บรวบรวมข้อมูลส่วนบุคคล ที่อยู่ อายุ และ เพศ</li>
+                    <li>บันทึกภาพและเสียงวิดีโอ ตลอดการทำแบบทดสอบเพื่อนำไปวิเคราะห์ผลทางการแพทย์</li>
                     <li>เก็บรวบรวมข้อมูลการตอบสนองและภาพวาดนาฬิกา</li>
                 </ul>
-               
             </div>
-             <p className="text-sm text-gray-500 mt-4  mx-4">
-                    ข้อมูลทั้งหมดจะถูกเก็บรักษาเป็นความลับและใช้เพื่อการวิจัยเท่านั้น ท่านสามารถยกเลิกการทำแบบทดสอบได้ตลอดเวลา
-            </p>
         </div>
 
         {/* 2. Video Recording / Device Check */}
-        <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+        <div className="bg-gray-50 rounded-2xl md:p-6 p-3 border border-gray-200">
              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <Video className="text-primary"/> 
-                บันทึกวิดีโอยืนยัน & ทดสอบอุปกรณ์
+                <Video className="text-primary md:block hidden"/> 
+                บันทึกวิดีโอยืนยัน
             </h3>
             
-            <p className="text-gray-600 mb-4">
-                กรุณากดปุ่ม <strong>"เริ่มอัดคลิป"</strong> และพูดว่า <span className="text-primary font-bold">"ข้าพเจ้ายินยอมให้ข้อมูล"</span> แล้วกดหยุด
+            <p className="text-gray-600 mb-4 text-center">
+                กรุณากดปุ่ม <strong className='text-red-500'>"เริ่มอัดคลิป"</strong> และพูดตาม <span className="text-primary font-bold">"กล่องสีขาวด้านบน"</span> เมื่อพูดครบแล้วกดหยุด
             </p>
 
             {cameraError ? (
@@ -191,11 +233,18 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
             ${(consent && (hasRecorded || cameraError)) // Allow proceed if error to not block, or strict? Let's be strict but allow error bypass if logic demands, here strict on recorded unless error
                 ? 'bg-primary hover:bg-primaryHover text-white hover:shadow-xl hover:-translate-y-1' 
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
+            ${isLoading ? 'opacity-80 cursor-not-allowed' : 'hover:-translate-y-2'}
           `}
         >
-          <span>ถัดไป</span>
-          <ArrowRight size={32} strokeWidth={3} />
-        </button>
+          {isLoading ? (
+                   <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                 ) : (
+                   <>
+                     <span>ถัดไป</span>
+                     <ArrowRight size={32} strokeWidth={3} />
+                   </>
+                 )}
+               </button>
       </div>
 
     </div>

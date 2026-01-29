@@ -9,7 +9,7 @@ import { useEffect } from 'react'
 
 export default function VerificationRoute() {
   const router = useRouter()
-  const setVolunteerCode = useAssessmentStore((s) => s.setVolunteerCode)
+  const setParticipantCode = useAssessmentStore((s) => s.setParticipantId)
   const { setCanReplay } = useVoiceGuideControl()
 
   useEffect(() => {
@@ -20,7 +20,7 @@ export default function VerificationRoute() {
     <AppShell>
       <VerificationPage
         onSubmit={(code) => {
-          setVolunteerCode(code)
+          setParticipantCode(code)
           router.push('/consent')
         }}
       />

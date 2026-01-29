@@ -21,48 +21,51 @@ export const TGDSAnswerPage: React.FC<Props> = ({
   const [finalAnswer, setFinalAnswer] = useState<boolean | null>(null);
 
   const recognitionRef = useRef<any>(null);
+  const listeningIntentRef = useRef(false); // ⭐ สำคัญ
 
-  /* ================= Answer Detection ================= */
+  /* ================= Reset on Question Change ================= */
 
   useEffect(() => {
     recognitionRef.current?.abort();
     recognitionRef.current = null;
 
+    listeningIntentRef.current = false;
     setFinalAnswer(null);
     setHasDetectedAnswer(false);
     setIsListening(false);
   }, [question]);
 
- const detectAnswerWithQuestion = (
-      transcript: string,
-      questionText: string
-    ): boolean | null => {
+  /* ================= Answer Detection ================= */
 
-      const normalize = (s: string) =>
-        s
-          .toLowerCase()
-          .replace(/\s+/g, '')
-          .replace(/[.,!?]/g, '');
+  const detectAnswerWithQuestion = (
+    transcript: string,
+    questionText: string
+  ): boolean | null => {
+    const normalize = (s: string) =>
+      s
+        .toLowerCase()
+        .replace(/\s+/g, '')
+        .replace(/[.,!?]/g, '');
 
-      const t = normalize(transcript);
-      const q = normalize(questionText);
+    const t = normalize(transcript);
+    const q = normalize(questionText);
 
-      const remaining = t.replace(q, '');
+    const remaining = t.replace(q, '');
+    if (!remaining) return null;
 
-      if (!remaining) return null;
+    const NEGATIVE = ['ไม่ใช่', 'ไม่เลย', 'เปล่า', 'ไม่ได้'];
+    for (const w of NEGATIVE) {
+      if (remaining.includes(w)) return false;
+    }
 
-      const NEGATIVE = ['ไม่ใช่', 'ไม่เลย', 'เปล่า', 'ไม่ได้'];
-      for (const w of NEGATIVE) {
-        if (remaining.includes(w)) return false;
-      }
+    const POSITIVE = ['ใช่', 'ถูก'];
+    for (const w of POSITIVE) {
+      if (remaining.includes(w)) return true;
+    }
 
-      const POSITIVE = ['ใช่', 'ถูก'];
-      for (const w of POSITIVE) {
-        if (remaining.includes(w)) return true;
-      }
+    return null;
+  };
 
-      return null;
-    };
   /* ================= Speech Recognition ================= */
 
   const createRecognition = () => {
@@ -77,21 +80,32 @@ export const TGDSAnswerPage: React.FC<Props> = ({
 
     rec.onresult = (e: any) => {
       const transcript = e.results[0][0].transcript.trim();
-      const detected = detectAnswerWithQuestion(
-          transcript,
-          question
-        );
+      const detected = detectAnswerWithQuestion(transcript, question);
 
       if (detected !== null) {
-        rec.stop();
+        listeningIntentRef.current = false;
         setFinalAnswer(detected);
         setHasDetectedAnswer(true);
         setIsListening(false);
+        rec.stop();
       }
     };
 
-    rec.onerror = () => setIsListening(false);
-    rec.onend = () => setIsListening(false);
+    rec.onerror = () => {
+      // ❌ อย่าปิด listening
+      // engine error → ปล่อยให้ onend จัดการ
+    };
+
+    rec.onend = () => {
+      // ⭐ key logic
+      if (listeningIntentRef.current && !hasDetectedAnswer) {
+        try {
+          rec.start(); // 🔁 ฟังต่อ
+        } catch {
+          /* Safari/Chrome บางครั้ง start ซ้ำเร็วเกิน */
+        }
+      }
+    };
 
     return rec;
   };
@@ -100,11 +114,13 @@ export const TGDSAnswerPage: React.FC<Props> = ({
 
   const toggleListening = () => {
     if (isListening) {
+      listeningIntentRef.current = false;
       recognitionRef.current?.stop();
       setIsListening(false);
     } else {
       recognitionRef.current?.abort();
       recognitionRef.current = createRecognition();
+      listeningIntentRef.current = true;
       recognitionRef.current.start();
       setIsListening(true);
     }
@@ -114,6 +130,7 @@ export const TGDSAnswerPage: React.FC<Props> = ({
     recognitionRef.current?.abort();
     recognitionRef.current = null;
 
+    listeningIntentRef.current = false;
     setFinalAnswer(null);
     setHasDetectedAnswer(false);
     setIsListening(false);
