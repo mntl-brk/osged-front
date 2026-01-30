@@ -9,5 +9,6 @@ export async function GET(
 
   const data = await backendFetch(`/participants/verify/${code}`)
 
+  
   return NextResponse.json(data)
 }

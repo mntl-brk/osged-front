@@ -17,6 +17,7 @@ export const deleteParticipant = (payload: { id: string }) =>
     OutputSchema,
     async (v) => {
       const res = await del(`/api/participants/${v.id}`)
+
       return res.data
     }
   )

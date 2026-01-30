@@ -4,6 +4,7 @@ import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 import { useRequireLandscape } from '@/hooks/useRequireLandscape';
 import { RotateDeviceOverlay } from '../RotateDeviceOverlay';
 import { ClockDemoOverlay } from '../ClockDemoOverlay';
+import { ClockEvent } from '@/types/clockEvents';
 
 interface AssessmentClockDrawingPageProps {
   onNext: (data: string) => void;
@@ -48,6 +49,22 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
   const [showDemo, setShowDemo] = useState(false);
   const hasShownDemoRef = useRef(false);
 
+
+  //เก็บ log
+  const eventsRef = useRef<ClockEvent[]>([])
+  const logEvent = (event: ClockEvent) => {
+    eventsRef.current.push(event)
+  }
+  const dragStartPosRef = useRef<{ x: number; y: number } | null>(null)
+
+  const dragMetaRef = useRef<{
+      startTime?: number
+      startAngle?: number
+  } | null>(null)
+
+  const lastMoveAngleRef = useRef<number | null>(null)
+
+
   const { isSpeaking } = useVoiceGuide(
       'ต่อไปจะเป็นการสร้างนาฬิกานะครับ กรุณาลากตัวเลขและเข็มนาฬิกา ทางกล่องด้านขวามือของหน้าจอ เพื่อบอกเวลา สิบเอ็ดนาฬิกา สิบ นาที ค่อย ๆ ทำ ไม่ต้องรีบครับ',
     {
@@ -80,13 +97,32 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
   };
 
   const handlePointerDown = (e: React.PointerEvent, id: number | 'hour' | 'minute') => {
-    if (isSpeaking) return;
-    e.preventDefault();
+    if (isSpeaking) return
+    e.preventDefault()
 
-    lockScroll();        
-    pushHistory();
-    setDraggingId(id);
-  };
+    lockScroll()
+    pushHistory()
+
+    dragMetaRef.current = {
+      startTime: Date.now(),
+      startAngle:
+        id === 'hour'
+          ? hourHand.angle
+          : id === 'minute'
+          ? minuteHand.angle
+          : undefined,
+    }
+
+    if (typeof id === 'number') {
+      const n = numbers.find(n => n.value === id)
+      if (n) {
+        dragStartPosRef.current = { x: n.x, y: n.y }
+      }
+    }
+
+    lastMoveAngleRef.current = null
+    setDraggingId(id)
+  }
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!draggingId || !containerRef.current) return;
@@ -94,6 +130,7 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
     const rect = containerRef.current.getBoundingClientRect();
 
     if (typeof draggingId === 'number') {
+      
       const x = ((e.clientX - rect.left) / rect.width) * 100;
       const y = ((e.clientY - rect.top) / rect.height) * 100;
 
@@ -135,12 +172,86 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
     if (draggingId === 'minute') {
       setMinuteHand(prev => ({ ...prev, angle: prev.angle + delta }));
     }
+
+    if (draggingId === 'hour' || draggingId === 'minute') {
+      const centerX = rect.left + rect.width / 2
+      const centerY = rect.top + rect.height / 2
+
+      const radians = Math.atan2(e.clientY - centerY, e.clientX - centerX)
+      let angle = (radians * 180) / Math.PI + 90
+      if (angle < 0) angle += 360
+
+      if (lastMoveAngleRef.current === null) {
+        lastMoveAngleRef.current = angle
+        return
+      }
+
+      let delta = angle - lastMoveAngleRef.current
+      if (delta > 180) delta -= 360
+      if (delta < -180) delta += 360
+
+      lastMoveAngleRef.current = angle
+
+      if (draggingId === 'hour') {
+        setHourHand(prev => ({ ...prev, angle: prev.angle + delta }))
+      }
+      if (draggingId === 'minute') {
+        setMinuteHand(prev => ({ ...prev, angle: prev.angle + delta }))
+      }
+    }
+
   };
+
+
   const handlePointerUp = () => {
-    unlockScroll();
-    setDraggingId(null);
-    lastAngleRef.current = null;
-  };
+    unlockScroll()
+
+    const meta = dragMetaRef.current
+    if (!meta || draggingId === null) {
+      cleanup()
+      return
+    }
+
+    const duration = Date.now() - (meta.startTime ?? Date.now())
+
+    if (typeof draggingId === 'number' && dragStartPosRef.current) {
+      const n = numbers.find(n => n.value === draggingId)
+      if (n) {
+        const dx = n.x - dragStartPosRef.current.x
+        const dy = n.y - dragStartPosRef.current.y
+
+        logEvent({
+          type: 'move_number',
+          value: draggingId,
+          from: dragStartPosRef.current,
+          to: { x: n.x, y: n.y },
+          distance: Math.sqrt(dx * dx + dy * dy),
+          duration_ms: duration,
+          t: Date.now(),
+        })
+      }
+    }
+
+    if (draggingId === 'hour' || draggingId === 'minute') {
+      logEvent({
+        type: 'rotate_hand',
+        hand: draggingId,
+        fromAngle: meta.startAngle!,
+        toAngle: draggingId === 'hour' ? hourHand.angle : minuteHand.angle,
+        duration_ms: duration,
+        t: Date.now(),
+      })
+    }
+
+    cleanup()
+  }
+
+  const cleanup = () => {
+    dragMetaRef.current = null
+    dragStartPosRef.current = null
+    lastMoveAngleRef.current = null
+    setDraggingId(null)
+  }
 
   const placeFromPalette = (id: number | 'hour' | 'minute') => {
     if (isSpeaking) return;
@@ -149,6 +260,14 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
 
     if (typeof id === 'number') {
       const safePos = getSafeInitialPosition();
+
+      logEvent({
+        type: 'place_number',
+        value: id,
+        x: safePos.x,
+        y: safePos.y,
+        t: Date.now(),
+      })
 
       setNumbers(prev =>
         prev.map(n =>
@@ -171,12 +290,14 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
   };
 
   const handleReset = () => {
+    logEvent({ type: 'reset', t: Date.now() })
     setNumbers(prev => prev.map(n => ({ ...n, isPlaced: false })));
     setHourHand({ type: 'hour', angle: 0, isPlaced: false });
     setMinuteHand({ type: 'minute', angle: 0, isPlaced: false });
   };
 
   const handleBack = () => {
+    logEvent({ type: 'undo', t: Date.now() })
     const last = historyRef.current.pop();
     if (!last) return;
 
@@ -275,7 +396,7 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
     };
   };
 
-  
+
   return (
     <>
      {needLandscape && <RotateDeviceOverlay />}

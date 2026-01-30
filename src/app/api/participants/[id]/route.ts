@@ -3,11 +3,12 @@ import { backendFetch } from '@/lib/apiBackend';
 
 export async function PUT(
   _: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const body = await _.json();
+  const { id } = await context.params
 
-  const data = await backendFetch(`/participants/${params.id}`, {
+  const data = await backendFetch(`/participants/${id}`, {
     method: 'PUT',
     body: JSON.stringify(body),
   });
@@ -17,11 +18,13 @@ export async function PUT(
 
 export async function DELETE(
   _: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  await backendFetch(`/participants/${params.id}`, {
+
+  const { id } = await context.params
+  const data = await backendFetch(`/participants/${id}`, {
     method: 'DELETE',
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json(data);
 }

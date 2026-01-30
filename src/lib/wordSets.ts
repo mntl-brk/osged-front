@@ -15,3 +15,6 @@ export function getWordSetByEducation(
   if (!set) throw new Error('Word set 6 not found')
   return set
 }
+
+export const getWordSetById = (id: string): WordSet | undefined =>
+  WORD_SETS.find((w) => w.id === id)

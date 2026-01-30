@@ -13,6 +13,7 @@ import {
 import { listParticipants } from '@/api/participant/listParticipants'
 import { createParticipant } from '@/api/participant/createParticipant'
 import { Participant } from '@/types/Participant';
+import { deleteParticipant } from '@/api/participant/deleteParticipant';
 
 interface VolunteerManagementPageProps {
   onBack: () => void;
@@ -25,35 +26,34 @@ export const VolunteerManagementPage: React.FC<VolunteerManagementPageProps> = (
   // =========================
   // LOAD PARTICIPANTS
   // =========================
-  useEffect(() => {
-    const load = async () => {
-      const result = await listParticipants()
-      result.match(
-        (data) => {
-          setCodes(
-            data.map((p) => ({
-              id: p.id,
-              code: p.code,
-              status: p.status,
-              created_at: p.created_at,
-            }))
-          )
-        },
-        () => {
-          alert('โหลดข้อมูลไม่สำเร็จ')
-        }
-      )
-    }
+useEffect(() => {
+  const load = async () => {
+    const result = await listParticipants()
+    result.match(
+      (data) => {
+        setCodes(
+          data.map((p) => ({
+            id: p.id,
+            code: p.code,
+            status: p.status,
+            created_at: p.created_at,
+          }))
+        )
+      },
+      () => {
+        alert('โหลดข้อมูลไม่สำเร็จ')
+      }
+    )
+  }
 
-    load()
-  }, [])
+  load()
+}, [])
 
   // =========================
   // CREATE PARTICIPANT
   // =========================
   const generateCode = async () => {
     const result = await createParticipant()
-
     result.match(
       (p) => {
         const newCode: Participant = {
@@ -83,9 +83,19 @@ export const VolunteerManagementPage: React.FC<VolunteerManagementPageProps> = (
   // =========================
   // DELETE (UI ONLY ตอนนี้)
   // =========================
-  const deleteCode = (id: string) => {
+  const deleteCode = async (id: string) => {
     if (!confirm('คุณต้องการลบรหัสนี้ใช่หรือไม่?')) return
-    setCodes((prev) => prev.filter((c) => c.id !== id))
+
+    const result = await deleteParticipant({ id })
+
+    result.match(
+      () => {
+        setCodes((prev) => prev.filter((c) => c.id !== id))
+      },
+      () => {
+        alert('ลบรหัสไม่สำเร็จ')
+      }
+    )
   }
 
 

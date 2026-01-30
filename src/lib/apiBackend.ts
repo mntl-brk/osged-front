@@ -1,22 +1,35 @@
-const BACKEND_BASE = process.env.BACKEND_API_URL;
+const BACKEND_BASE = process.env.BACKEND_API_URL!
 
-export async function backendFetch(
+export class BackendHttpError extends Error {
+  constructor(
+    public status: number,
+    public payload: any
+  ) {
+    super(`Backend error ${status}`)
+  }
+}
+
+export async function backendFetch<T>(
   path: string,
   options?: RequestInit
-) {
+): Promise<T> {
   const res = await fetch(`${BACKEND_BASE}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
       ...(options?.headers || {}),
+      ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
     },
     cache: 'no-store',
-  });
+  })
+
+  const contentType = res.headers.get('content-type')
+  const payload = contentType?.includes('application/json')
+    ? await res.json()
+    : await res.text()
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || 'Backend error');
+    throw new BackendHttpError(res.status, payload)
   }
 
-  return res.json();
+  return payload as T
 }

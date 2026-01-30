@@ -1,4 +1,4 @@
-import { object, string, union, literal, array } from 'valibot'
+import { object, string, union, literal, array, uuid, pipe, boolean } from 'valibot'
 
 export const ParticipantStatusSchema = union([
   literal('unused'),
@@ -7,12 +7,12 @@ export const ParticipantStatusSchema = union([
 ])
 
 export const ParticipantSchema = object({
-  id: string(),
+  id: pipe(string(), uuid()),
   code: string(),
   status: ParticipantStatusSchema,
   created_at: string()
 })
 
-export const ParticipantListSchema = object({
-  data: array(ParticipantSchema),
-})
+export const ParticipantListResponseSchema = array(ParticipantSchema)
+
+export const ParticipantResponseSchema =  ParticipantSchema
