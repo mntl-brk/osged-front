@@ -3,13 +3,13 @@ import { backendFetch } from '@/lib/apiBackend'
 
 export async function POST(
   req: Request,
-  context: { params: Promise<{ minicogId: string }> }
+  context: { params: Promise<{ sessionId: string }> }
 ) {
+  const { sessionId } = await context.params
   const body = await req.json()
-  const {minicogId} = await context.params
 
   const data = await backendFetch(
-    `/minicog/${minicogId}/clock/complete`,
+    `/sessions/${sessionId}/minicog/complete`,
     {
       method: 'POST',
       body: JSON.stringify(body),

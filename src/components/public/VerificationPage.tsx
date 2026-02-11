@@ -27,7 +27,7 @@ export const VerificationPage: React.FC<VerificationPageProps> = ({ onSubmit }) 
           onSubmit(participant.id);
         },
         () => {
-          alert('รหัสไม่ถูกต้อง หรือถูกใช้งานไปแล้ว');
+          alert('ไม่พบรหัสผู้เข้าร่วม กรุณาตรวจสอบรหัสอีกครั้ง');
         }
       );
     } finally {

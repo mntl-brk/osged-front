@@ -3,12 +3,12 @@ import { backendFetch } from '@/lib/apiBackend'
 
 export async function GET(
   _: Request,
-   context: { params: Promise<{ minicogId: string }> }
+   context: { params: Promise<{ sessionId: string }> }
 ) {
 
-  const {minicogId} = await context.params
+  const {sessionId} = await context.params
   const data = await backendFetch(
-    `/minicog/${minicogId}/clock`
+    `/sessions/${sessionId}/clock`
   )
   return NextResponse.json(data)
 }

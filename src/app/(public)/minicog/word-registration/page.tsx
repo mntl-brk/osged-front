@@ -17,7 +17,6 @@ export default function WordRegistrationRoute() {
 
   const currentWordSet = useAssessmentStore((s) => s.currentWordSet)
   const setCurrentWordSet = useAssessmentStore((s) => s.setCurrentWordSet)
-  const setMiniCogId = useAssessmentStore((s) => s.setMiniCogId)
   const startedRef = useRef(false)
 
   useEffect(() => {
@@ -51,9 +50,7 @@ export default function WordRegistrationRoute() {
         })
 
         result.match(
-          (minicog) => {
-            setMiniCogId(minicog.minicog_id)
-          },
+          () => {},
           (err) => {
             alert('ไม่สามารถเริ่ม Mini-Cog ได้')
             console.error(err)

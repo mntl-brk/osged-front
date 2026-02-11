@@ -18,8 +18,6 @@ type State = {
   recallScore: number | null
   moodScore: number | null
 
-  minicogId: string | null
-
   setHasHydrated: (v: boolean) => void
   setModalContent: (v: string | null) => void
   setFontSize: (v: State['fontSize']) => void
@@ -31,8 +29,6 @@ type State = {
   setRecallScore: (v: number | null) => void
   setMoodScore: (v: number | null) => void
   resetAll: () => void
-
-  setMiniCogId: (id: string) => void
 }
 
 export const useAssessmentStore = create<State>()(
@@ -52,8 +48,6 @@ export const useAssessmentStore = create<State>()(
       recallScore: null,
       moodScore: null,
 
-      minicogId: null,
-
       setHasHydrated: (v) => set({ hasHydrated: v }),
       setModalContent: (v) => set({ modalContent: v }),
       setFontSize: (v) => set({ fontSize: v }),
@@ -65,8 +59,6 @@ export const useAssessmentStore = create<State>()(
       setRecallScore: (v) => set({ recallScore: v }),
       setMoodScore: (v) => set({ moodScore: v }),
       
-      setMiniCogId: (v) => set({ minicogId: v }),
-
       resetAll: () =>
         set({
           modalContent: null,
@@ -76,7 +68,6 @@ export const useAssessmentStore = create<State>()(
           currentWordSet: null,
           recallScore: null,
           moodScore: null,
-          minicogId: null,
         }),
     }),
     {

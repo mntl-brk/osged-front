@@ -4,12 +4,12 @@ import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 import { useRequireLandscape } from '@/hooks/useRequireLandscape';
 import { RotateDeviceOverlay } from '../RotateDeviceOverlay';
 import { ClockDemoOverlay } from '../ClockDemoOverlay';
-import { ClockEvent } from '@/types/clockEvents';
+import { ClockDrawingResult, ClockEvent } from '@/types/clockEvents';
+import { toPng } from 'html-to-image';
 
 interface AssessmentClockDrawingPageProps {
-  onNext: (data: string) => void;
+  onNext: (result: ClockDrawingResult) => void
 }
-
 interface ClockNumber {
   value: number;
   x: number; 
@@ -48,7 +48,8 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
   const hasSpoken = useRef(false);
   const [showDemo, setShowDemo] = useState(false);
   const hasShownDemoRef = useRef(false);
-
+  
+  const startedAtRef = useRef<number>(Date.now())
 
   //เก็บ log
   const eventsRef = useRef<ClockEvent[]>([])
@@ -77,6 +78,16 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
       },
     }
   );
+
+
+  const captureClockArea = async () => {
+    if (!containerRef.current) return ''
+
+    return await toPng(containerRef.current, {
+      backgroundColor: '#ffffff',
+      pixelRatio: 2,
+    })
+  }
 
   const pushHistory = () => {
     historyRef.current.push({
@@ -545,8 +556,6 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
                   </div>
                 ))}
 
-              </div>
-
 
             {/* Hour Hand */}
             {hourHand.isPlaced && (
@@ -628,6 +637,8 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
             )}
           </div>
         </div>
+      </div>
+
 
 
         <div
@@ -744,9 +755,21 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
 
      <div className={`${isCompactLandscape ? 'mt-2' : 'mt-14'} w-full max-w-sm`}>
        <button
-          onClick={() => {
-            if (isSpeaking) return;
-            onNext(generateClockImage());
+          onClick={async () => {
+            if (isSpeaking) return
+
+            const finalImage = await captureClockArea()
+            const finishedAt = Date.now()
+
+            onNext({
+              final_image: finalImage,
+              events: eventsRef.current,
+              meta: {
+                started_at: startedAtRef.current,
+                finished_at: finishedAt,
+                duration_ms: finishedAt - startedAtRef.current,
+              },
+            })
           }}
           disabled={isSpeaking}
           className={`

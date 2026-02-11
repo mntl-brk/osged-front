@@ -25,3 +25,13 @@ export type ClockEvent =
     }
   | { type: 'undo'; t: number }
   | { type: 'reset'; t: number }
+
+  export interface ClockDrawingResult {
+  final_image: string          // base64 PNG
+  events: ClockEvent[]         // interaction log
+  meta: {
+    started_at: number
+    finished_at: number
+    duration_ms: number
+  }
+}
