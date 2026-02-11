@@ -102,3 +102,20 @@ export function del<T>(
 ) {
   return request<T>('delete', url, undefined, config)
 }
+
+export const postForm = async <T>(
+  url: string,
+  formData: FormData
+): Promise<T> => {
+  const res = await fetch(url, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  })
+
+  if (!res.ok) {
+    throw new Error('Upload failed')
+  }
+
+  return res.json()
+}

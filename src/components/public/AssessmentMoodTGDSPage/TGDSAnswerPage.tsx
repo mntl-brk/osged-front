@@ -1,12 +1,22 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { BaseTGDSLayout } from './BaseTGDSLayout';
+'use client'
+
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+} from 'react'
+import { BaseTGDSLayout } from './BaseTGDSLayout'
+import { useTGDSRecordingUpload } from '@/hooks/useTGDSRecordingUpload'
+import { uploadMedia } from '@/api/media/uploadMedia'
 
 interface Props {
-  question: string;
-  index: number;
-  total: number;
-  progressPercent: number;
-  onAnswer: (answer: boolean) => void;
+  question: string
+  index: number
+  total: number
+  progressPercent: number
+  sessionId: string
+  onAnswer: (answer: boolean, mediaId?: string) => void
 }
 
 export const TGDSAnswerPage: React.FC<Props> = ({
@@ -14,133 +24,232 @@ export const TGDSAnswerPage: React.FC<Props> = ({
   index,
   total,
   progressPercent,
+  sessionId,
   onAnswer,
 }) => {
-  const [isListening, setIsListening] = useState(false);
-  const [hasDetectedAnswer, setHasDetectedAnswer] = useState(false);
-  const [finalAnswer, setFinalAnswer] = useState<boolean | null>(null);
+  /* ================= STATE ================= */
 
-  const recognitionRef = useRef<any>(null);
-  const listeningIntentRef = useRef(false); // ⭐ สำคัญ
+  const [isListening, setIsListening] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [hasDetectedAnswer, setHasDetectedAnswer] = useState(false)
+  const [finalAnswer, setFinalAnswer] = useState<boolean | null>(null)
+  const accumulatedTranscriptRef = useRef('')
+  const hasSpokenQuestionRef = useRef(false)
+  /* ================= REFS ================= */
 
-  /* ================= Reset on Question Change ================= */
+  const recognitionRef = useRef<any>(null)
+  const listeningIntentRef = useRef(false)
+
+  /* ================= Upload Helper ================= */
+
+ const uploadTGDSVideo = useCallback(
+    async (blob: Blob): Promise<string> => {
+      const result = await uploadMedia({
+        sessionId,
+        purpose: 'tgds_test',
+        questionNo: index + 1,   
+        file: blob,
+      })
+
+      return result.match(
+        (media) => media.media_id,
+        (error) => {
+          throw error
+        }
+      )
+    },
+    [sessionId, index]  
+  )
+
+  /* ================= RECORDING HOOK (เรียกครั้งเดียว) ================= */
+
+  const {
+    stopAndUpload: stopRecordingAndUpload,
+    restartRecording,
+    isUploading,
+  } = useTGDSRecordingUpload({
+    enabled: isRecording,
+    uploadFn: uploadTGDSVideo,
+  })
+
+  /* ================= START RECORDING WHEN QUESTION LOADS ================= */
 
   useEffect(() => {
-    recognitionRef.current?.abort();
-    recognitionRef.current = null;
+    setIsRecording(true)
 
-    listeningIntentRef.current = false;
-    setFinalAnswer(null);
-    setHasDetectedAnswer(false);
-    setIsListening(false);
-  }, [question]);
+    return () => {
+      setIsRecording(false)
+    }
+  }, [question])
 
-  /* ================= Answer Detection ================= */
+  /* ================= RESET STATE WHEN QUESTION CHANGES ================= */
 
-  const detectAnswerWithQuestion = (
-    transcript: string,
-    questionText: string
-  ): boolean | null => {
-    const normalize = (s: string) =>
-      s
-        .toLowerCase()
-        .replace(/\s+/g, '')
-        .replace(/[.,!?]/g, '');
+  useEffect(() => {
+    resetAnswer()
+  }, [question])
 
-    const t = normalize(transcript);
-    const q = normalize(questionText);
+  const normalize = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/\s+/g, '')
+      .replace(/[.,!?]/g, '')
 
-    const remaining = t.replace(q, '');
-    if (!remaining) return null;
+  const extractAnswerPart = (fullTranscript: string, questionText: string) => {
+    const t = normalize(fullTranscript)
+    const q = normalize(questionText)
 
-    const NEGATIVE = ['ไม่ใช่', 'ไม่เลย', 'เปล่า', 'ไม่ได้'];
-    for (const w of NEGATIVE) {
-      if (remaining.includes(w)) return false;
+    const index = t.indexOf(q)
+
+    if (index === -1) return null
+
+    // ตัดคำถามออก
+    const afterQuestion = t.substring(index + q.length)
+
+    return afterQuestion
+  }
+
+  const isQuestionSpoken = (transcript: string, questionText: string) => {
+    const t = normalize(transcript)
+    const q = normalize(questionText)
+
+    let matchCount = 0
+
+    for (let i = 0; i < q.length - 2; i++) {
+      const chunk = q.substring(i, i + 3)
+      if (t.includes(chunk)) {
+        matchCount++
+      }
     }
 
-    const POSITIVE = ['ใช่', 'ถูก'];
-    for (const w of POSITIVE) {
-      if (remaining.includes(w)) return true;
+    const ratio = matchCount / (q.length - 2)
+
+    return ratio >= 0.5   
+  }
+
+  /* ================= SPEECH RECOGNITION ================= */
+  const detectAnswer = (fullTranscript: string) => {
+    if (!fullTranscript) return null
+
+    const cleaned = fullTranscript
+      .replace(/\s+/g, '')
+      .replace(/ครับ|ค่ะ|นะ|จ้า/g, '')
+
+    const tail = cleaned.slice(-8)
+
+    //  ตรวจ pattern รวมคำ
+    if (tail.endsWith('ไม่ใช่')) {
+      // ถ้า pattern ก่อนหน้าเป็น "หรือไม่ใช่"
+      if (cleaned.endsWith('หรือไม่ใช่')) {
+        return true   // แปลว่า "หรือไม่" + "ใช่"
+      }
+      return false
     }
 
-    return null;
-  };
+    if (tail.endsWith('ใช่')) return true
 
-  /* ================= Speech Recognition ================= */
+    return null
+  }
 
   const createRecognition = () => {
     const SR =
       (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
+      (window as any).webkitSpeechRecognition
 
-    const rec = new SR();
-    rec.lang = 'th-TH';
-    rec.continuous = false;
-    rec.interimResults = false;
+    const rec = new SR()
+    rec.lang = 'th-TH'
+    rec.continuous = true
+    rec.interimResults = false
 
-    rec.onresult = (e: any) => {
-      const transcript = e.results[0][0].transcript.trim();
-      const detected = detectAnswerWithQuestion(transcript, question);
+ 
+  rec.onresult = (e: any) => {
+    // ดึง result ล่าสุด
+    const result = e.results[e.results.length - 1]
+    const transcript = result[0].transcript.trim()
 
-      if (detected !== null) {
-        listeningIntentRef.current = false;
-        setFinalAnswer(detected);
-        setHasDetectedAnswer(true);
-        setIsListening(false);
-        rec.stop();
-      }
-    };
+    // สะสมข้อความ
+    accumulatedTranscriptRef.current += ' ' + transcript
 
-    rec.onerror = () => {
-      // ❌ อย่าปิด listening
-      // engine error → ปล่อยให้ onend จัดการ
-    };
+    const fullTranscript = accumulatedTranscriptRef.current
+
+
+    const answerPart = extractAnswerPart(fullTranscript, question)
+
+    if (!answerPart) return
+
+
+    const detected = detectAnswer(fullTranscript)
+
+    if (detected !== null) {
+      listeningIntentRef.current = false
+      setFinalAnswer(detected)
+      setHasDetectedAnswer(true)
+      setIsListening(false)
+      rec.stop()
+    }
+  }
 
     rec.onend = () => {
-      // ⭐ key logic
       if (listeningIntentRef.current && !hasDetectedAnswer) {
         try {
-          rec.start(); // 🔁 ฟังต่อ
-        } catch {
-          /* Safari/Chrome บางครั้ง start ซ้ำเร็วเกิน */
-        }
+          rec.start()
+        } catch {}
       }
-    };
+    }
 
-    return rec;
-  };
+    return rec
+  }
 
-  /* ================= Actions ================= */
+  /* ================= ACTIONS ================= */
 
   const toggleListening = () => {
     if (isListening) {
-      listeningIntentRef.current = false;
-      recognitionRef.current?.stop();
-      setIsListening(false);
+      listeningIntentRef.current = false
+      recognitionRef.current?.stop()
+      setIsListening(false)
     } else {
-      recognitionRef.current?.abort();
-      recognitionRef.current = createRecognition();
-      listeningIntentRef.current = true;
-      recognitionRef.current.start();
-      setIsListening(true);
+      recognitionRef.current?.abort()
+      recognitionRef.current = createRecognition()
+      listeningIntentRef.current = true
+      recognitionRef.current.start()
+      setIsListening(true)
     }
-  };
+  }
 
-  const resetAnswer = () => {
-    recognitionRef.current?.abort();
-    recognitionRef.current = null;
+  /* ================= HARD RESET ================= */
 
-    listeningIntentRef.current = false;
-    setFinalAnswer(null);
-    setHasDetectedAnswer(false);
-    setIsListening(false);
-  };
+  const resetAnswer = async () => {
+    recognitionRef.current?.abort()
+    recognitionRef.current = null
 
-  useEffect(() => {
-    return () => recognitionRef.current?.abort();
-  }, []);
+    listeningIntentRef.current = false
+    setFinalAnswer(null)
+    setHasDetectedAnswer(false)
+    setIsListening(false)
 
-  /* ================= Render ================= */
+    // 🔥 Hard reset video recording
+    await restartRecording()
+  }
+
+  /* ================= SUBMIT ================= */
+
+  const handleSubmit = async () => {
+    if (finalAnswer === null) return
+
+    try {
+      const mediaId = await stopRecordingAndUpload()
+
+      if (mediaId) {
+        onAnswer(finalAnswer, mediaId)
+      } else {
+        alert('ไม่สามารถบันทึกวิดีโอได้')
+      }
+    } catch (e) {
+      console.error(e)
+      alert('เกิดข้อผิดพลาด')
+    }
+  }
+
+  /* ================= RENDER ================= */
 
   return (
     <BaseTGDSLayout
@@ -159,9 +268,8 @@ export const TGDSAnswerPage: React.FC<Props> = ({
       hasDetectedAnswer={hasDetectedAnswer}
       onToggleListening={toggleListening}
       onResetAnswer={resetAnswer}
-      onSubmitAnswer={() => {
-        if (finalAnswer !== null) onAnswer(finalAnswer);
-      }}
+      onSubmitAnswer={handleSubmit}
+      isUploading={isUploading}
     />
-  );
-};
+  )
+}

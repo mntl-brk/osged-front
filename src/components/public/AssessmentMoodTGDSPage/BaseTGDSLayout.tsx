@@ -26,6 +26,8 @@ interface BaseTGDSLayoutProps {
   onToggleListening: () => void;
   onResetAnswer?: () => void;
   onSubmitAnswer?: () => void;
+  isUploading?: boolean
+
 }
 
 export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
@@ -39,6 +41,7 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
   onToggleListening,
   onResetAnswer,
   onSubmitAnswer,
+  isUploading = false,
 }) => {
   const hasFinalAnswer = Boolean(finalAnswerText);
 
@@ -161,19 +164,47 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
         {!isListening && hasDetectedAnswer && (
           <div className="flex gap-2 w-full animate-fade-in-up">
             <button
+              disabled={isUploading}
               onClick={onResetAnswer}
-              className="flex-1 bg-white border-4 border-gray-300 text-gray-600 px-2 rounded-[30px] text-xl md:text-3xl font-bold flex items-center justify-center gap-2 hover:bg-gray-50 transition-all"
+              className={`
+                flex-1 px-2 rounded-[30px]
+                text-xl md:text-3xl font-bold
+                flex items-center justify-center gap-2
+                transition-all
+                ${
+                  isUploading
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-white border-4 border-gray-300 text-gray-600 hover:bg-gray-50'
+                }
+              `}
             >
-              <RotateCcw className='h-12' />
+              <RotateCcw className="h-10" />
               พูดใหม่
             </button>
 
             <button
+              disabled={isUploading}
               onClick={onSubmitAnswer}
-              className="flex-[2] bg-gray-900 text-white py-4 rounded-[30px] text-xl md:text-3xl font-black flex items-center justify-center gap-2 hover:bg-black shadow-xl transition-all"
+              className={`
+                flex-[2] py-4 rounded-[30px]
+                text-xl md:text-3xl font-black
+                flex items-center justify-center gap-3
+                shadow-xl transition-all
+                ${
+                  isUploading
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gray-900 hover:bg-black text-white'
+                }
+              `}
             >
-              <span>ส่งคำตอบ</span>
-              <Send className='h-12' />
+              {isUploading ? (
+                 <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>ส่งคำตอบ</span>
+                  <Send className="h-10" />
+                </>
+              )}
             </button>
           </div>
         )}
