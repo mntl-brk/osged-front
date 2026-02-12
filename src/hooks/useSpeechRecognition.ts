@@ -1,9 +1,20 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react'
 
 interface UseSpeechRecognitionOptions {
-  lang?: string;
-  maxWords?: number;
-  enabled?: boolean;
+  lang?: string
+  maxWords?: number
+  enabled?: boolean
+}
+
+export interface SpeechSegment {
+  text: string
+  confidence: number
+  start_time?: number
+  end_time?: number
+  alternatives?: {
+    text: string
+    confidence: number
+  }[]
 }
 
 export const useSpeechRecognition = ({
@@ -11,112 +22,159 @@ export const useSpeechRecognition = ({
   maxWords = 3,
   enabled = true,
 }: UseSpeechRecognitionOptions = {}) => {
-  const recognitionRef = useRef<any>(null);
-  const listeningRef = useRef(false);
-  const bufferRef = useRef('');
+  const recognitionRef = useRef<any>(null)
+  const listeningRef = useRef(false)
+  const bufferRef = useRef('')
+  const startTimeRef = useRef<number | null>(null)
+  const hasNetworkErrorRef = useRef(false)
 
-  const [isListening, setIsListening] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [words, setWords] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false)
+  const [transcript, setTranscript] = useState('')
+  const [words, setWords] = useState<string[]>([])
+  const [segments, setSegments] = useState<SpeechSegment[]>([])
+  const [error, setError] = useState<string | null>(null)
 
-  /* ---------- Init ---------- */
+  const isEdge =
+    typeof navigator !== 'undefined' &&
+    /edg/i.test(navigator.userAgent)
+
   useEffect(() => {
-    if (!enabled) return;
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      setError('SpeechRecognition not supported');
-      return;
-    }
+    if (!enabled) return
 
     const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition
 
-    const recognition = new SpeechRecognition();
+    if (!SpeechRecognition) {
+      setError('SpeechRecognition not supported')
+      return
+    }
 
-    recognition.lang = lang;
-    recognition.continuous = true;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    const recognition = new SpeechRecognition()
+    recognition.lang = lang
+    recognition.continuous = false
+    recognition.interimResults = false
+    recognition.maxAlternatives = 3
+
+    recognition.onstart = () => {
+      startTimeRef.current = performance.now()
+    }
 
     recognition.onresult = (event: any) => {
-      const result = event.results[event.results.length - 1];
-      if (!result.isFinal) return;
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i]
+        if (!result.isFinal) continue
 
-      const text = result[0].transcript?.trim();
-      if (!text) return;
+        const primary = result[0]
+        const text = primary.transcript?.trim()
+        const confidence = primary.confidence ?? 0
 
-      bufferRef.current += ' ' + text;
+        if (!text) continue
 
-      const normalized = bufferRef.current.trim();
-      const parsedWords = normalized
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, maxWords);
+        const now = performance.now()
 
-      setTranscript(normalized);
-      setWords(parsedWords);
-    };
+        // รวม transcript
+        bufferRef.current += ' ' + text
+        const normalized = bufferRef.current.trim()
 
-    recognition.onerror = (e: any) => {
-      setError(e.error || 'speech error');
-    };
+        // สร้าง segment object
+        const segment: SpeechSegment = {
+          text,
+          confidence,
+          start_time: startTimeRef.current
+            ? (startTimeRef.current / 1000)
+            : undefined,
+          end_time: now / 1000,
+          alternatives: Array.from(result)
+            .slice(1)
+            .map((alt: any) => ({
+              text: alt.transcript,
+              confidence: alt.confidence ?? 0,
+            })),
+        }
+
+        setSegments(prev => [...prev, segment])
+
+        const parsedWords = normalized
+          .split(/\s+/)
+          .filter(Boolean)
+          .slice(0, maxWords)
+
+        setTranscript(normalized)
+        setWords(parsedWords)
+      }
+    }
+
+    recognition.onerror = (event: any) => {
+      if (event.error === 'network') {
+        hasNetworkErrorRef.current = true
+        listeningRef.current = false
+        setIsListening(false)
+        recognition.stop()
+        return
+      }
+
+      if (event.error === 'not-allowed') {
+        setError('Microphone permission denied')
+      }
+    }
 
     recognition.onend = () => {
-      if (listeningRef.current) {
+      if (
+        listeningRef.current &&
+        !hasNetworkErrorRef.current &&
+        !isEdge
+      ) {
         try {
-          recognition.start();
+          recognition.start()
         } catch {}
       }
-    };
+    }
 
-    recognitionRef.current = recognition;
+    recognitionRef.current = recognition
 
-    return () => recognition.abort();
-  }, [enabled, lang, maxWords]);
+    return () => recognition.abort()
+  }, [enabled, lang, maxWords])
 
-  /* ---------- Controls ---------- */
   const start = () => {
-    if (!recognitionRef.current) return;
+    if (!recognitionRef.current) return
 
-    bufferRef.current = '';
-    setTranscript('');
-    setWords([]);
-    setError(null);
+    bufferRef.current = ''
+    setTranscript('')
+    setWords([])
+    setSegments([])
+    setError(null)
+
+    hasNetworkErrorRef.current = false
+    listeningRef.current = true
+    setIsListening(true)
 
     try {
-      recognitionRef.current.stop();
+      recognitionRef.current.start()
     } catch {}
-
-    setTimeout(() => {
-      try {
-        recognitionRef.current.start();
-        listeningRef.current = true;
-        setIsListening(true);
-      } catch {}
-    }, 150);
-  };
+  }
 
   const stop = () => {
-    listeningRef.current = false;
-    setIsListening(false);
-    try {
-      recognitionRef.current?.stop();
-    } catch {}
-  };
+    listeningRef.current = false
+    setIsListening(false)
+    recognitionRef.current?.stop()
+  }
 
   const reset = () => {
-    bufferRef.current = '';
-    setTranscript('');
-    setWords([]);
-  };
+    bufferRef.current = ''
+    setTranscript('')
+    setWords([])
+    setSegments([])
+  }
 
   return {
     isListening,
     transcript,
     words,
+    segments,
     error,
     start,
     stop,
     reset,
-  };
-};
+  }
+}

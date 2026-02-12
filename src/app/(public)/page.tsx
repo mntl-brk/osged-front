@@ -33,7 +33,7 @@ export default function HomePage() {
         onOpenInfo={() => setModalContent('project-info')}
         onOpenFAQ={() => setModalContent('faq')}
         onOpenPDPA={() => setModalContent('pdpa')}
-        onOpenDoctorPortal={() => router.push('dashboard/login')}
+        onOpenDoctorPortal={() => router.push('login')}
       />
     </AppShell>
   )

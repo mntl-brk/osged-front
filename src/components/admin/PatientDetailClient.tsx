@@ -2,21 +2,26 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { Gender, PatientRecord } from '@/types'
-import { AlertCircle, ArrowLeft, BarChart3, Brain, Calendar, CheckCircle, Clock, FileText, Mic, Smile, TrendingUp, User, Video, Activity, X, ChevronDown } from 'lucide-react'
+import { Gender } from '@/types'
+import { PatientDetail } from '@/types/Participant'
+import { AlertCircle, ArrowLeft, BarChart3, Brain, Calendar, CheckCircle, Clock, FileText, Mic, Smile, TrendingUp, User, Video, Activity, X, ChevronDown, CheckCircle2, Film, FileJson } from 'lucide-react'
+import { SecureImage } from '../SecureImage'
+import { SecureVideo } from '../SecureVideo'
+import { SecureJson } from '../SecureJson'
+import { ScoreSelector } from '../ScoreSelector'
+import { mapEducationTH, mapGenderTH, mapLocationTH } from '@/utils/demographicMapper'
 
 interface Props {
-  patient: PatientRecord
+  patient: PatientDetail
 }
 
 export default function PatientDetailClient({ patient }: Props) {
   const router = useRouter()
-  const [clockScore, setClockScore] = useState(0)
 
     const formatDate = (isoString: string) => {
-      return new Date(isoString).toLocaleDateString('th-TH', {
-        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-      });
+      return new Date(isoString).toLocaleString('th-TH', {
+        timeZone: 'Asia/Bangkok',
+      })
     };
   
     const mapGender = (g: Gender | null) => {
@@ -24,6 +29,10 @@ export default function PatientDetailClient({ patient }: Props) {
       if (g === 'female') return 'หญิง';
       return 'อื่นๆ';
     };
+    const [openSection, setOpenSection] = useState<'video' | 'json' | null>(null)
+    const [clockScore, setClockScore] = useState<0 | 1 | 2 | null>(
+        patient.miniCog.clockScore as 0 | 1 | 2 | null
+    )
 
     const [openSections, setOpenSections] = useState({
     miniCog: true,
@@ -36,6 +45,38 @@ export default function PatientDetailClient({ patient }: Props) {
         [key]: !prev[key],
     }))
     }
+
+    const [totalScore, setTotalScore] = useState(
+    patient.miniCog?.score ?? 0
+    )
+
+    const handleClockScore = async (score: 0 | 1 | 2) => {
+    try {
+        setClockScore(score)
+
+        const res = await fetch(
+        `/api/minicog/${patient.id}/clock/update`,
+        {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clock_score: score }),
+        }
+        )
+
+        if (!res.ok) throw new Error()
+
+        const data = await res.json()
+
+        if (data.total_score !== undefined) {
+        setTotalScore(data.total_score)
+        }
+
+    } catch (err) {
+        alert('ไม่สามารถบันทึกคะแนนได้')
+        setClockScore(patient.miniCog.clockScore as 0 | 1 | 2 | null)
+    }
+    }
+
   return (
     <div className="min-h-screen bg-gray-50">
 
@@ -64,26 +105,97 @@ export default function PatientDetailClient({ patient }: Props) {
         <div className="bg-white rounded-[40px] shadow-sm border border-gray-200 overflow-hidden">
                 
                 {/* Header Section */}
-                <div className="p-8 border-b border-gray-100 flex justify-between items-start bg-gray-50/50 sticky z-10">
-                    <div className="flex items-center gap-6">
-                        <div className="w-20 h-20 bg-primary text-white rounded-3xl flex items-center justify-center shadow-lg shadow-primary/20">
-                             <User size={40} />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-3 mb-1">
-                                <h2 className="text-3xl font-black text-gray-900 tracking-tight">V-ID: {patient.volunteersId}</h2>
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${patient.status === 'high-risk' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-600 border-green-200'}`}>
-                                    {patient.status}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-4 text-gray-500 font-bold">
-                                <span className="flex items-center gap-1.5"><Calendar size={18}/> {formatDate(patient.timestamp)}</span>
-                                <span className="w-1.5 h-1.5 bg-gray-300 rounded-full"></span>
-                                <span>{patient.demographics.age} ปี / {mapGender(patient.demographics.gender)}</span>
-                            </div>
-                        </div>
-                    </div>
+        <div className="p-8 border-b border-gray-100 bg-gray-50/60">
+
+        <div className="flex items-start justify-between gap-10">
+
+            {/* LEFT SIDE */}
+            <div className="flex items-start gap-6">
+
+            {/* Avatar */}
+            <div className="w-20 h-20 bg-primary text-white rounded-3xl flex items-center justify-center shadow-lg shadow-primary/20">
+                <User size={40} />
+            </div>
+
+            {/* Identity + Demographics */}
+            <div className="space-y-6">
+
+                {/* ================= IDENTITY ================= */}
+                <div className="flex items-center gap-4">
+                    <h2 className="text-3xl font-black text-gray-900 tracking-tight">
+                    V-ID: {patient.volunteer_code}
+                    </h2>
+
+                    <span
+                    className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border ${
+                        patient.status === 'high-risk'
+                        ? 'bg-red-50 text-red-600 border-red-200'
+                        : 'bg-green-50 text-green-600 border-green-200'
+                    }`}
+                    >
+                    {patient.status === 'high-risk' ? 'High Risk' : 'Normal'}
+                    </span>
                 </div>
+
+                {/* ================= DEMOGRAPHICS ================= */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-5">
+
+                    {/* วันที่ทำแบบทดสอบ */}
+                    <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                        วันที่ประเมิน
+                    </p>
+                    <div className="flex items-center gap-2 text-gray-800 font-semibold">
+                        {formatDate(patient.completed_at)}
+                    </div>
+                    </div>
+
+                    {/* อายุ */}
+                    <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                        อายุ
+                    </p>
+                    <p className="text-gray-900 font-bold text-lg">
+                        {patient.demographics.age} ปี
+                    </p>
+                    </div>
+
+                    {/* เพศ */}
+                    <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                        เพศ
+                    </p>
+                    <p className="text-gray-900 font-bold text-lg">
+                        {mapGenderTH(patient.demographics.sex)}
+                    </p>
+                    </div>
+
+                    {/* การศึกษา */}
+                    <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                        ระดับการศึกษา
+                    </p>
+                    <p className="text-gray-900 font-bold text-lg">
+                        {mapEducationTH(patient.demographics.educationLevel)}
+                    </p>
+                    </div>
+
+                    {/* ประเภทที่อยู่อาศัย */}
+                    <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                        ประเภทที่อยู่อาศัย
+                    </p>
+                    <p className="text-gray-900 font-bold text-lg">
+                        {mapLocationTH(patient.demographics.locationType)}
+                    </p>
+                    </div>
+
+                </div>
+                </div>
+            </div>
+
+        </div>
+        </div>
 
                 {/* Vertical Scrollable Body */}
                 <div className="p-8 overflow-y-auto space-y-10 bg-white">
@@ -113,91 +225,219 @@ export default function PatientDetailClient({ patient }: Props) {
                             size={28}
                             />
                         </button>
-                            {openSections.miniCog && (
-                                <div className="space-y-10 animate-fade-in">
 
-                        {/* Word Recall Detail */}
-                        <div className="bg-white rounded-[35px] border-2 border-gray-100 p-8 shadow-sm">
+                        {openSections.miniCog && (
+                        <div className="space-y-10 animate-fade-in">
+
+                            {/* ================= WORD RECALL ================= */}
+                            <div className="bg-white rounded-[35px] border-2 border-gray-100 p-8 shadow-sm">
                             <div className="flex justify-between items-center mb-6">
                                 <h4 className="text-xl font-black text-gray-800 flex items-center gap-2">
-                                    <TrendingUp size={20} className="text-blue-500"/> รายละเอียดคำศัพท์ (3-Word Recall)
+                                <TrendingUp size={20} className="text-blue-500" />
+                                <span>รายละเอียดคำศัพท์ (3-Word Recall)</span>
                                 </h4>
+
                                 <div className="px-4 py-2 bg-blue-50 text-blue-700 rounded-2xl font-black">
-                                    Score: {patient.miniCog.recallScore}/3
+                                Score: {patient.miniCog?.recallScore ?? 0}/3
                                 </div>
                             </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                            {/* Guard กัน undefined */}
+                            {patient.miniCog?.wordRegistration?.length ? (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 {patient.miniCog.wordRegistration.map((word, i) => {
-                                    const isRecalled = patient.miniCog.recalledWords.includes(word);
+                                    const isRecalled =
+                                    patient.miniCog?.recalledWords?.includes(word)
+
                                     return (
-                                        <div 
-                                            key={i} 
-                                            className={`
-                                                relative p-6 rounded-[30px] border-4 flex flex-col items-center justify-center gap-2 transition-all
-                                                ${isRecalled 
-                                                    ? 'bg-green-50 border-green-400 text-green-700 shadow-sm' 
-                                                    : 'bg-red-50 border-red-200 text-red-500 opacity-80'}
-                                            `}
-                                        >
-                                            <span className="absolute -top-3 left-6 px-3 py-0.5 bg-white border-2 border-inherit rounded-full text-[10px] font-black uppercase">Word {i+1}</span>
-                                            {isRecalled ? <CheckCircle size={32} /> : <X size={32} />}
-                                            <span className="text-3xl font-black">{word}</span>
-                                            <span className="text-xs font-bold uppercase tracking-widest opacity-60">
-                                                {isRecalled ? 'RECALLED' : 'NOT FOUND'}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="mt-8 flex gap-3">
-                                <button className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 py-4 rounded-2xl font-black flex items-center justify-center gap-3 transition-all border border-blue-200">
-                                    <Mic size={20} /> ฟังเสียงผู้บันทึก (Recall Phase)
-                                </button>
-                                <button className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 py-4 rounded-2xl font-black flex items-center justify-center gap-3 transition-all border border-blue-200">
-                                    <Smile size={20} /> วิเคราะห์ใบหน้า (Recall Phase)
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Clock Drawing Detail */}
-                        <div className="bg-white rounded-[35px] border-2 border-gray-100 p-8 shadow-sm">
-                            <div className="flex justify-between items-center mb-6">
-                                <h4 className="text-xl font-black text-gray-800 flex items-center gap-2">
-                                    <Clock size={20} className="text-blue-500"/> รูปวาดนาฬิกา (Clock Drawing Test)
-                                </h4>
-                                <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-2xl border border-gray-200">
-                                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">ประเมินคะแนน:</span>
-                                    <select 
-                                        value={clockScore}
-                                        onChange={(e) => setClockScore(Number(e.target.value))}
-                                        className="bg-transparent font-black text-gray-900 focus:outline-none cursor-pointer text-lg"
+                                    <div
+                                        key={i}
+                                        className={`
+                                        relative p-6 rounded-[30px] border-4
+                                        flex flex-col items-center justify-center gap-2
+                                        transition-all
+                                        ${
+                                            isRecalled
+                                            ? 'bg-green-50 border-green-400 text-green-700 shadow-sm'
+                                            : 'bg-red-50 border-red-200 text-red-500 opacity-80'
+                                        }
+                                        `}
                                     >
-                                        <option value={0}>0 - ผิด (Abnormal)</option>
-                                        <option value={2}>2 - ถูก (Normal)</option>
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div className="w-full max-w-xl mx-auto aspect-square bg-gray-50 rounded-[40px] border-4 border-dashed border-gray-100 flex items-center justify-center overflow-hidden shadow-inner p-6">
-                                {patient.miniCog.clockImage ? (
-                                    <img src={patient.miniCog.clockImage} alt="Clock" className="w-full h-full object-contain" />
-                                ) : (
-                                    <div className="text-center text-gray-200">
-                                        <Clock size={120} strokeWidth={1} className="mx-auto mb-4 opacity-20" />
-                                        <p className="text-xl font-black">ไม่พบข้อมูลรูปวาด</p>
+                                        <span className="absolute -top-3 left-6 px-3 py-0.5 bg-white border-2 border-inherit rounded-full text-[10px] font-black uppercase">
+                                        Word {i + 1}
+                                        </span>
+
+                                        {isRecalled ? (
+                                        <CheckCircle size={32} />
+                                        ) : (
+                                        <X size={32} />
+                                        )}
+
+                                        <span className="text-3xl font-black">{word}</span>
+
+                                        <span className="text-xs font-bold uppercase tracking-widest opacity-60">
+                                        {isRecalled ? 'RECALLED' : 'NOT FOUND'}
+                                        </span>
                                     </div>
-                                )}
+                                    )
+                                })}
+                                </div>
+                            ) : (
+                                <div className="text-center text-gray-400 font-bold py-10">
+                                ไม่มีข้อมูลคำศัพท์
+                                </div>
+                            )}
                             </div>
-                            <p className="text-center text-gray-400 text-xs font-bold mt-4 italic uppercase tracking-widest">
-                                * แพทย์พิจารณาความสมบูรณ์ของตัวเลขและเข็มนาฬิกา (11:10)
-                            </p>
-                        </div>
-                        
+
+                            {/* ================= CLOCK DRAWING ================= */}
+                            <div className="grid grid-cols-2 p-6 gap-8 bg-white rounded-[40px] border border-gray-100 shadow-lg border-2">
+
+                            {/* ================= LEFT: FINAL CLOCK ================= */}
+                            <div className="xl:col-span-2 relative overflow-hidden">
+
+                            {/* Subtle background glow */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-50/40 via-transparent to-transparent pointer-events-none" />
+
+                            <div className="relative z-10">
+
+                                <h4 className="text-2xl font-black text-gray-800 mb-10 flex items-center gap-3">
+                                <Clock size={26} className="text-blue-500" />
+                                Clock Drawing – Final Result
+                                </h4>
+
+                                {/* Clock container */}
+                                <div className="relative aspect-square max-w-xl mx-auto rounded-[40px] flex items-center justify-center overflow-hidden">
+
+                                {patient.miniCog.clockImage ? (
+                                    <SecureImage
+                                    path={patient.miniCog.clockImage}
+                                    alt="Clock drawing"
+                                    className="w-full h-full object-contain p-10"
+                                    />
+                                ) : (
+                                    <Clock size={180} strokeWidth={1} className="text-gray-200" />
+                                )}
+
+                                </div>
+
+                            </div>
+                            </div>
+
+                            {/* ================= RIGHT: CONTROL + SUPPORTING DATA ================= */}
+                            <div className="xl:col-span-2 space-y-6">
+
+                                {/* ===== CLOCK SCORE (ACTION FIRST) ===== */}
+                               
+                                <div className="bg-white rounded-[32px] border border-gray-100 p-6 shadow-sm">
+                                <p className="text-xs font-bold text-gray-600 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                    <CheckCircle2 size={16} />
+                                    Assign Clock Score
+                                </p>
+
+                                <ScoreSelector
+                                    value={clockScore}
+                                    onChange={handleClockScore}
+                                />
+                                </div>
+
+                                {/* ===== VIDEO ===== */}
+                                   <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+
+                                    <button
+                                        onClick={() =>
+                                        setOpenSection(openSection === 'video' ? null : 'video')
+                                        }
+                                        className="w-full flex items-center justify-between px-6 py-5"
+                                    >
+                                        <div className="flex items-center gap-2 text-sm font-bold text-gray-600 uppercase tracking-widest">
+                                        <Film size={16} />
+                                        Drawing Video
+                                        </div>
+
+                                        <ChevronDown
+                                        size={18}
+                                        className={`transition-transform text-gray-400 ${
+                                            openSection === 'video' ? 'rotate-180' : ''
+                                        }`}
+                                        />
+                                    </button>
+
+                                    {openSection === 'video' && (
+                                        <div className="px-6 pb-12">
+                                        <div className="aspect-video bg-black rounded-2xl overflow-hidden">
+                                            {patient.miniCog.clock_video_url ? (
+                                            <SecureVideo
+                                                path={patient.miniCog.clock_video_url}
+                                                className="w-full h-full object-contain"
+                                            />
+                                            ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                                                ไม่มีวิดีโอ
+                                            </div>
+                                            )}
+                                        </div>
+                                        </div>
+                                    )}
+                                    </div>
+
+                                {/* ===== JSON EVENT ===== */}
+                                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+
+                                    <button
+                                        onClick={() =>
+                                        setOpenSection(openSection === 'json' ? null : 'json')
+                                        }
+                                        className="w-full flex items-center justify-between px-6 py-5"
+                                    >
+                                        <div className="flex items-center gap-2 text-sm font-bold text-gray-600 uppercase tracking-widest">
+                                        <FileJson size={16} />
+                                        Stroke Metadata
+                                        </div>
+
+                                        <ChevronDown
+                                        size={18}
+                                        className={`transition-transform text-gray-400 ${
+                                            openSection === 'json' ? 'rotate-180' : ''
+                                        }`}
+                                        />
+                                    </button>
+
+                                    {openSection === 'json' && (
+                                        <div className="px-6 pb-12">
+                                        <div className="h-56 border border-gray-200 rounded-2xl overflow-hidden">
+                                            {patient.miniCog.clock_events_url ? (
+                                            <SecureJson path={patient.miniCog.clock_events_url} />
+                                            ) : (
+                                            <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+                                                ไม่มี JSON
+                                            </div>
+                                            )}
+                                        </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                            </div>
+                            </div>
+
+                            {/* ================= TOTAL SCORE ================= */}
+                            <div className="mt-12 bg-blue-50 border border-blue-100 rounded-3xl p-8 flex items-center justify-between">
+
+                            <div>
+                                <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-1">
+                                Mini-Cog Total Score
+                                </p>
+                                <p className="text-5xl font-black text-blue-800">
+                                {totalScore} / 5
+                                </p>
+                            </div>
+
+                            <Brain size={52} className="text-blue-300" />
+
+                            </div>
+                            </div>
+                        )}
                     </div>
-                   )}
-                </div>
 
                     {/* SECTION 2: Mood (TGDS) */}
                     <div className="space-y-6">
@@ -278,7 +518,7 @@ export default function PatientDetailClient({ patient }: Props) {
                                                 <p className="text-xs text-gray-400 font-bold">โทนเสียงและการสั่นไหว</p>
                                             </div>
                                         </div>
-                                        <span className="text-lg font-black text-orange-600">62% Anxious</span>
+                                        <span className="text-lg font-black text-orange-600">Coming Soon</span>
                                     </div>
 
                                     <div className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-orange-200 transition-all">
@@ -291,12 +531,13 @@ export default function PatientDetailClient({ patient }: Props) {
                                                 <p className="text-xs text-gray-400 font-bold">การวิเคราะห์สีหน้า (Video)</p>
                                             </div>
                                         </div>
-                                        <span className="text-lg font-black text-blue-600">80% Flat Affect</span>
+                                        <span className="text-lg font-black text-blue-600">Coming Soon</span>
                                     </div>
                                 </div>
 
                                 <button className="w-full bg-gray-900 text-white py-5 rounded-3xl font-black flex items-center justify-center gap-3 transition-all hover:bg-black shadow-xl active:scale-95">
-                                    <Video size={24} /> เล่นวิดีโอระหว่างประเมิน (TGDS Phase)
+                                    <Video size={24} /> Coming Soon
+                                    {/* เล่นวิดีโอระหว่างประเมิน (TGDS Phase) */}
                                 </button>
                             </div>
                         </div>

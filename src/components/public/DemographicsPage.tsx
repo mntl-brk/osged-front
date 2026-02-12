@@ -84,7 +84,7 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
           onSubmit({
             currentLocationDescription: locationDescription,
             age,
-            gender,
+            sex: gender,
             locationType,
             educationLevel,
           })

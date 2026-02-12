@@ -5,7 +5,7 @@ import { AssessmentWordRecallPage } from '@/components/public/AssessmentWordReca
 import { useAssessmentStore } from '@/store/assessmentStore'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
-import { completeMiniCog } from '@/api/minicog/completeMinicog'
+import { finalizeRecall } from '@/api/minicog/finalizeRecall'
 
 export default function WordRecallRoute() {
   const router = useRouter()
@@ -24,20 +24,33 @@ export default function WordRecallRoute() {
     <AppShell>
       <AssessmentWordRecallPage
         correctWordSet={currentWordSet}
-        onNext={async (score) => {
-          setRecallScore(score)
+        onNext={async (score, transcript, segments) => {
+          try {
 
-         try {
-            await completeMiniCog({
+            const result = await finalizeRecall({
               session_id: sessionId,
-              recall_score: score,
+              user_transcript: transcript,
+              segments: segments.map(s => ({
+                text: s.text,
+                confidence: s.confidence,
+              })),
             })
 
-              router.push('/tgds/intro')
-            } catch (err) {
-              console.error('completeMiniCog failed', err)
-            }
 
+
+            result.match(
+              (data) => {
+                setRecallScore(data.recall_score)
+                router.push('/tgds/intro')
+              },
+              (err) => {
+                console.error(err)
+                alert('เกิดข้อผิดพลาด')
+              }
+            )
+          } catch (err) {
+            console.error('finalizeRecall failed', err)
+          }
         }}
       />
     </AppShell>

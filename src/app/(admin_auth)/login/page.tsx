@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { DoctorLoginPage } from '@/components/admin/DoctorLoginPage'
 
-export default function VolunteerManagementRoute() {
+export default function LoginRoute() {
   const router = useRouter()
 
   return (

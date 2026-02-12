@@ -2,11 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Mic, StopCircle, Send, RotateCcw } from 'lucide-react';
 import { WordSet } from '@/types';
 import { useVoiceGuide } from '@/hooks/useVoiceGuide';
-import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { SpeechSegment, useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 
 interface AssessmentWordRecallPageProps {
   correctWordSet: WordSet;
-  onNext: (score: number, recalledWords: string[]) => void;
+  onNext: (score: number, transcript: string, segments: SpeechSegment[]) => void;
 }
 
 export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> = ({
@@ -19,7 +19,6 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
   const [isEvaluating, setIsEvaluating] = useState(false);
 
   const [hasSpoken, setHasSpoken] = useState(false);
-
   /* ================= AI GUIDE ================= */
   const { status, isSpeaking, replay } = useVoiceGuide(
       `ต่อไปนะครับ ขอให้พูดคำทั้งสามคำที่จำไว้ก่อนหน้านี้
@@ -33,6 +32,7 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
     isListening,
     transcript,
     words: recognizedWords,
+    segments,
     start,
     stop,
     reset,
@@ -53,7 +53,7 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
 
     if (isListening) stop();
 
-    onNext(calculateScore(), recognizedWords);
+    onNext(calculateScore(), transcript, segments);
   };
 
   const displayWords = [

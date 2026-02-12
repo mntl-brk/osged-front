@@ -17,7 +17,7 @@ export type EducationLevel = 'below_p4' | 'p4_or_above';
 export interface DemographicsData {
   currentLocationDescription: string;
   age: string;
-  gender: Gender | null;
+  sex: Gender | null;
   locationType: Location | null;
   educationLevel: EducationLevel;
 }
@@ -33,14 +33,15 @@ export interface AssessmentData {
 
 export interface PatientRecord {
   id: string;
-  volunteersId: string;
-  timestamp: string;
+  volunteer_code: string;
+  completed_at: string;
   demographics: DemographicsData;
   miniCog: {
     wordRegistration: string[];
     clockImage: string | null; // Base64
     recalledWords: string[];
     recallScore: number;
+    clockScore: number;
     score: number;
   };
   tgds: {

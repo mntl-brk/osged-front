@@ -14,27 +14,32 @@ export const DoctorLoginPage: React.FC<DoctorLoginPageProps> = ({ onLoginSuccess
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    
-    if (!username || !password) {
-      setError('กรุณากรอกชื่อผู้ใช้งานและรหัสผ่าน');
-      return;
-    }
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+    setIsLoading(true)
 
-    setIsLoading(true);
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          password,
+        }),
+      })
 
-    // Mock Authentication Logic
-    setTimeout(() => {
-      if (username === 'test' && password === 'test') {
-        onLoginSuccess();
-      } else {
-        setError('ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
-        setIsLoading(false);
+      if (!res.ok) {
+        throw new Error('Invalid credentials')
       }
-    }, 1000);
-  };
+
+      onLoginSuccess()
+    } catch (err) {
+      setError('ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans animate-fade-in">
