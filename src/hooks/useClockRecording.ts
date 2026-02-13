@@ -23,6 +23,8 @@ export function useClockRecording(enabled: boolean) {
         mimeType: 'video/webm',
       })
 
+      chunksRef.current = []
+
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data)
       }
@@ -44,11 +46,21 @@ export function useClockRecording(enabled: boolean) {
     const recorder = recorderRef.current
     if (!recorder) return null
 
-    if (recorder.state !== 'inactive') {
-      recorder.stop()
-    }
+    return new Promise((resolve) => {
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, {
+          type: 'video/webm',
+        })
 
-    return new Blob(chunksRef.current, { type: 'video/webm' })
+        resolve(blob)
+      }
+
+      if (recorder.state !== 'inactive') {
+        recorder.stop()
+      } else {
+        resolve(null)
+      }
+    })
   }
 
   return { stopAndGetVideo }

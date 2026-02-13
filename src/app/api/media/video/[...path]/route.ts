@@ -8,7 +8,7 @@ export async function GET(
   const filePath = path.join('/')
 
   const backendRes = await fetch(
-    `${process.env.BACKEND_API_URL}/doctor/media/video/${filePath}`,
+    `${process.env.BACKEND_API_URL}/doctor/video/${filePath}`,
     {
       headers: {
         cookie: req.headers.get('cookie') || '',

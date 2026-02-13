@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Gender } from '@/types'
 import { PatientDetail } from '@/types/Participant'
 import { AlertCircle, ArrowLeft, BarChart3, Brain, Calendar, CheckCircle, Clock, FileText, Mic, Smile, TrendingUp, User, Video, Activity, X, ChevronDown, CheckCircle2, Film, FileJson } from 'lucide-react'
@@ -10,25 +10,20 @@ import { SecureVideo } from '../SecureVideo'
 import { SecureJson } from '../SecureJson'
 import { ScoreSelector } from '../ScoreSelector'
 import { mapEducationTH, mapGenderTH, mapLocationTH } from '@/utils/demographicMapper'
+import { TgdsDetail } from '@/types/tgds'
+import { useTgds } from './useTgds'
+import { TGDS_QUESTIONS } from '@/data/tgdsQuestions'
+import { NewtonLoaderOverlay } from '../loading'
 
 interface Props {
   patient: PatientDetail
 }
 
 export default function PatientDetailClient({ patient }: Props) {
-  const router = useRouter()
-
-    const formatDate = (isoString: string) => {
-      return new Date(isoString).toLocaleString('th-TH', {
-        timeZone: 'Asia/Bangkok',
-      })
-    };
-  
-    const mapGender = (g: Gender | null) => {
-      if (g === 'male') return 'ชาย';
-      if (g === 'female') return 'หญิง';
-      return 'อื่นๆ';
-    };
+    const router = useRouter()
+    const [showLoader, setShowLoader] = useState(true)
+    const [formattedDate, setFormattedDate] = useState('')
+    const { tgds, loading, error } = useTgds(patient.id)
     const [openSection, setOpenSection] = useState<'video' | 'json' | null>(null)
     const [clockScore, setClockScore] = useState<0 | 1 | 2 | null>(
         patient.miniCog.clockScore as 0 | 1 | 2 | null
@@ -38,6 +33,29 @@ export default function PatientDetailClient({ patient }: Props) {
     miniCog: true,
     tgds: true,
     })
+
+    useEffect(() => {
+    let timer: NodeJS.Timeout
+
+    if (!loading) {
+        timer = setTimeout(() => {
+        setShowLoader(false)
+        }, 600) 
+    } else {
+        setShowLoader(true)
+    }
+
+    return () => clearTimeout(timer)
+    }, [loading])
+
+    useEffect(() => {
+        setFormattedDate(
+            new Date(patient.completed_at).toLocaleString('th-TH', {
+            timeZone: 'Asia/Bangkok',
+            })
+        )
+        }, [patient.completed_at])
+        
 
     const toggleSection = (key: keyof typeof openSections) => {
     setOpenSections(prev => ({
@@ -75,6 +93,66 @@ export default function PatientDetailClient({ patient }: Props) {
         alert('ไม่สามารถบันทึกคะแนนได้')
         setClockScore(patient.miniCog.clockScore as 0 | 1 | 2 | null)
     }
+    }
+
+
+    if (showLoader)
+    return (
+        <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+
+            <div className="relative">
+                <NewtonLoaderOverlay/>
+            </div>
+
+        </div>
+        </div>
+    )   
+
+    if (error || !tgds)
+    return (
+        <div className="min-h-screen bg-white flex flex-col items-center justify-center px-6">
+        <div className="max-w-md w-full bg-red-50 border border-red-200 rounded-3xl p-10 text-center shadow-sm">
+
+            <div className="w-16 h-16 mx-auto mb-6 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center">
+            ⚠️
+            </div>
+
+            <h2 className="text-2xl font-black text-red-700">
+            โหลดข้อมูลไม่สำเร็จ
+            </h2>
+
+            <p className="text-sm text-red-500 mt-3 font-semibold">
+            ไม่สามารถดึงข้อมูลการประเมินได้
+            </p>
+
+            <button
+            onClick={() => window.location.reload()}
+            className="mt-6 w-full bg-red-600 text-white py-3 rounded-2xl font-black hover:bg-red-700 transition-all"
+            >
+            ลองใหม่อีกครั้ง
+            </button>
+        </div>
+        </div>
+    )
+    function calculateTGDSScore(
+        answers: { question_no: number; answer: 0 | 1 }[]
+        ) {
+        return answers.reduce((total, item) => {
+            const question = TGDS_QUESTIONS.find(
+            (q) => q.id === item.question_no
+            )
+
+            if (!question) return total
+
+            const isYes = item.answer === 1
+
+            const isScored =
+            (isYes && question.scoreTarget === true) ||
+            (!isYes && question.scoreTarget === false)
+
+            return total + (isScored ? 1 : 0)
+        }, 0)
     }
 
   return (
@@ -146,7 +224,7 @@ export default function PatientDetailClient({ patient }: Props) {
                         วันที่ประเมิน
                     </p>
                     <div className="flex items-center gap-2 text-gray-800 font-semibold">
-                        {formatDate(patient.completed_at)}
+                        {formattedDate}
                     </div>
                     </div>
 
@@ -541,9 +619,95 @@ export default function PatientDetailClient({ patient }: Props) {
                                 </button>
                             </div>
                         </div>
-                        
+                    
+
+                    <div className="space-y-8 mt-10">
+                    <h4 className="text-xl font-black text-orange-900 flex items-center gap-2">
+                        <Activity size={22} className="text-orange-500" />
+                        รายละเอียดคำตอบรายข้อ (TGDS-15)
+                    </h4>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-6">
+                {tgds.answers.map((item) => {
+                    const question = TGDS_QUESTIONS.find(
+                        (q) => q.id === item.question_no
+                    )
+
+                    if (!question) return null
+
+                    const isYes = item.answer === 1
+
+                    //  คำนวณคะแนนตาม scoreTarget
+                    const isScored =
+                        (isYes && question.scoreTarget === true) ||
+                        (!isYes && question.scoreTarget === false)
+
+                    return (
+                        <div
+                        key={item.question_no}
+                        className="bg-white rounded-[30px] border-2 border-orange-100 shadow-sm hover:shadow-md hover:border-orange-200 transition-all overflow-hidden flex flex-col"
+                        >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-5 py-4 bg-orange-50/40 border-b border-orange-100">
+                            <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-orange-500 text-white flex items-center justify-center font-black text-sm">
+                                {item.question_no}
+                            </div>
+                            <span className="text-sm font-black text-orange-900">
+                                Q{item.question_no}
+                            </span>
+                            </div>
+
+                            {/* 🔥 แสดงผลตาม calculate */}
+                            <span
+                            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                                isScored
+                                ? 'bg-red-50 text-red-600 border-red-200'
+                                : 'bg-green-50 text-green-600 border-green-200'
+                            }`}
+                            >
+                            {isScored ? '+1' : '0'}
+                            </span>
+                        </div>
+
+                        {/* Question Text */}
+                        <div className="px-5 py-4 text-sm font-semibold text-gray-700 border-b border-gray-100">
+                            {question.text}
+                        </div>
+
+                        {/* Video */}
+                        <div className="aspect-video bg-black">
+                            {item.video_url ? (
+                            <SecureVideo
+                                path={item.video_url}
+                                className="w-full h-full object-contain"
+                            />
+                            ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">
+                                ไม่มีวิดีโอ
+                            </div>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 mt-auto">
+                            <button
+                            disabled
+                            className="w-full bg-gray-200 text-gray-500 py-2 rounded-2xl font-black text-xs flex items-center justify-center gap-2 cursor-not-allowed"
+                            >
+                            <BarChart3 size={16} />
+                            วิเคราะห์ AI (เร็ว ๆ นี้)
+                            </button>
+                        </div>
+                        </div>
+                    )
+                    })}
                     </div>
-             )}
+                    </div>
+
+
+                     </div>
+                    )}
 
                 </div>
 

@@ -13,35 +13,35 @@ export default function VerificationRoute() {
   const setParticipantId = useAssessmentStore((s) => s.setParticipantId)
   const { setCanReplay } = useVoiceGuideControl()
 
-  const [showChromeWarning, setShowChromeWarning] = useState(false)
+  // const [showChromeWarning, setShowChromeWarning] = useState(false)
 
   useEffect(() => {
     setCanReplay(false)
     return () => setCanReplay(true)
   }, [])
 
-  useEffect(() => {
-    const SR =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition
+  // useEffect(() => {
+  //   const SR =
+  //     (window as any).SpeechRecognition ||
+  //     (window as any).webkitSpeechRecognition
 
-    const isChrome =
-      /chrome/i.test(navigator.userAgent) &&
-      !/edg/i.test(navigator.userAgent)
+  //   const isChrome =
+  //     /chrome/i.test(navigator.userAgent) &&
+  //     !/edg/i.test(navigator.userAgent)
 
-    if (!SR || !isChrome) {
-      setShowChromeWarning(true)
-    }
-  }, [])
+  //   if (!SR || !isChrome) {
+  //     setShowChromeWarning(true)
+  //   }
+  // }, [])
 
   return (
     <>
-      <RequireChromeModal open={showChromeWarning} />
+      {/* <RequireChromeModal open={showChromeWarning} /> */}
 
       <AppShell>
         <VerificationPage
           onSubmit={(code) => {
-            if (showChromeWarning) return
+            // if (showChromeWarning) return
             setParticipantId(code)
             router.push('/consent')
           }}
