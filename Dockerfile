@@ -1,8 +1,6 @@
 # -------- Base --------
 FROM node:20-alpine AS base
 WORKDIR /app
-
-# Enable pnpm
 RUN corepack enable
 
 # -------- Dependencies --------
@@ -12,6 +10,13 @@ RUN pnpm install --frozen-lockfile
 
 # -------- Build --------
 FROM base AS builder
+
+ARG NEXT_PUBLIC_BACKEND_API_URL
+ARG BACKEND_API_URL
+
+ENV NEXT_PUBLIC_BACKEND_API_URL=$NEXT_PUBLIC_BACKEND_API_URL
+ENV BACKEND_API_URL=$BACKEND_API_URL
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm build
