@@ -18,8 +18,6 @@ export const VerificationPage: React.FC<VerificationPageProps> = ({ onSubmit }) 
     setIsLoading(true);
 
     try {
-      await sleep(500);
-
       const result = await verifyParticipantCode({ code });
 
       result.match(

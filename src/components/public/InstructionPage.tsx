@@ -2,16 +2,31 @@ import React from 'react';
 import { Clock, Volume2, Users, PauseCircle, Play } from 'lucide-react';
 import { unlockAudio } from '@/lib/audioUnlock';
 import { useVoiceGuide } from '@/hooks/useVoiceGuide';
+import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
+import { stopAudio } from '@/lib/audioManager';
 
 interface InstructionPageProps {
   onStart: () => void;
 }
 
 export const InstructionPage: React.FC<InstructionPageProps> = ({ onStart }) => {
-const instructionGuideText =
-  'ก่อนเริ่มทำแบบคัดกรองนะครับ. การประเมินนี้จะใช้เวลาประมาณ 10 ถึง 15 นาที แนะนำให้อยู่ในที่เงียบและมีแสงสว่างเพียงพอ เมื่อพร้อมแล้ว กรุณากดปุ่ม เริ่มทำแบบคัดกรอง ด้านล่าง เพื่อเริ่มต้นครับ'
+// const instructionGuideText =
+//   'ก่อนเริ่มทำแบบคัดกรองนะครับ. การประเมินนี้จะใช้เวลาประมาณ 10 ถึง 15 นาที แนะนำให้อยู่ในที่เงียบและมีแสงสว่างเพียงพอ เมื่อพร้อมแล้ว กรุณากดปุ่ม เริ่มทำแบบคัดกรอง ด้านล่าง เพื่อเริ่มต้นครับ'
 
-const { isSpeaking, replay } = useVoiceGuide(instructionGuideText)
+// const { isSpeaking, replay } = useVoiceGuide(instructionGuideText)
+
+const { isSpeaking } = useLocalVoiceGuide('/audio/instruction.mp3')
+
+const handleStart = () => {
+  if (isSpeaking) {
+    alert('กรุณารอฟังคำแนะนำให้จบก่อนครับ')
+    return
+  }
+
+  stopAudio()
+  onStart()
+}
+
   return (
     <div className="w-full max-w-3xl mx-auto px-6 py-24 animate-fade-in flex flex-col items-center pb-32">
       
@@ -69,22 +84,23 @@ const { isSpeaking, replay } = useVoiceGuide(instructionGuideText)
       </div>
 
       {/* CTA Button */}
-      <button 
-         onClick={async () => {
-          onStart();
-        }}
-                
-        className="
-          w-full max-w-md
-          bg-primary hover:bg-primaryHover text-white 
-          py-6 px-8 rounded-2xl 
-          text-2xl md:text-3xl font-bold 
-          shadow-lg hover:shadow-xl hover:-translate-y-1
-          transform transition-all duration-200
-          flex items-center justify-center gap-4
-          mb-8
-        "
-      >
+        <button 
+          onClick={handleStart}
+          disabled={isSpeaking}
+          className={`
+            w-full max-w-md
+            py-6 px-8 rounded-2xl 
+            text-2xl md:text-3xl font-bold 
+            shadow-lg transform transition-all duration-200
+            flex items-center justify-center gap-4
+            mb-8
+            ${
+              isSpeaking
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-primary hover:bg-primaryHover text-white hover:-translate-y-1'
+            }
+          `}
+        >
         <span>เริ่มทำแบบคัดกรอง</span>
         <Play size={32} fill="currentColor" />
       </button>

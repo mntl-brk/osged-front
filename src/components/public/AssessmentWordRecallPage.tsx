@@ -3,14 +3,13 @@ import { Mic, StopCircle, Send, RotateCcw } from 'lucide-react';
 import { WordSet } from '@/types';
 import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 import { SpeechSegment, useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
 
 interface AssessmentWordRecallPageProps {
-  correctWordSet: WordSet;
-  onNext: (score: number, transcript: string, segments: SpeechSegment[]) => void;
+  onNext: (transcript: string, segments: SpeechSegment[]) => void;
 }
 
 export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> = ({
-  correctWordSet,
   onNext,
 }) => {
   const recognitionRef = useRef<any>(null);
@@ -20,11 +19,15 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
 
   const [hasSpoken, setHasSpoken] = useState(false);
   /* ================= AI GUIDE ================= */
-  const { status, isSpeaking, replay } = useVoiceGuide(
-      `ต่อไปนะครับ ขอให้พูดคำทั้งสามคำที่จำไว้ก่อนหน้านี้
-        พูดต่อเนื่องกันได้เลย ไม่ต้องรีบนะครับ
-        เมื่อพร้อมแล้ว กดปุ่มไมค์สีแดงเพื่อเริ่มพูดครับ`,
-  )
+  // const { status, isSpeaking, replay } = useVoiceGuide(
+  //     `ต่อไปนะครับ ขอให้พูดคำทั้งสามคำที่จำไว้ก่อนหน้านี้
+  //       พูดต่อเนื่องกันได้เลย ไม่ต้องรีบนะครับ
+  //       เมื่อพร้อมแล้ว กดปุ่มไมค์สีแดงเพื่อเริ่มพูดครับ`,
+  // )
+
+  const { isSpeaking } = useLocalVoiceGuide('/audio/minicog_recall.mp3')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
 
 
   /* ================= Speech Recognition ================= */
@@ -41,21 +44,23 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
     maxWords: 3,
   });
 
-  const calculateScore = () => {
-    const transcriptText = transcript.replace(/\s+/g, '');
-    return correctWordSet.words.filter(word =>
-      transcriptText.includes(word)
-    ).length;
-  };
-
+  const normalize = (text: string) =>
+    text
+      .replace(/\s+/g, '')
+      .replace(/[่้๊๋]/g, '') 
+      .toLowerCase()
+  
   const handleSubmit = () => {
-    setIsEvaluating(false);
+    if (isSubmitting) return
 
-    if (isListening) stop();
+    setIsSubmitting(true)
 
-    onNext(calculateScore(), transcript, segments);
-  };
+    if (isListening) stop()
 
+    onNext(transcript, segments)
+
+    setIsEvaluating(false)
+  }
   const displayWords = [
     recognizedWords[0] || '',
     recognizedWords[1] || '',
@@ -101,7 +106,7 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
             </div>
           )}
 
-        {transcript && (
+        {transcript && !isEvaluating  && (
             <div
               className="
                 mt-2 mb-2 px-6 py-3
@@ -145,16 +150,16 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
              <button
                 onClick={() => {
                   if (isListening) {
-                    setIsEvaluating(true);
-                    stop();   
-                    setTimeout(handleSubmit, 2000); 
+                    setIsEvaluating(true)
+                    stop()
+                    setTimeout(handleSubmit, 500)
     
                   } else {
                     reset();     
                     start();    
                   }
                 }}
-                disabled={isSpeaking}
+                disabled={isSpeaking || isSubmitting}
                 className={`
                   w-40 h-40 rounded-full
                   flex flex-col items-center justify-center

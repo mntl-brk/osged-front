@@ -14,6 +14,8 @@ import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 import { useAssessmentStore } from '@/store/assessmentStore';
 import { createDemographics } from '@/api/demographics/createDemographics';
 import { sleep } from '@/hooks/useSleepPage';
+import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
+import { stopAudio } from '@/lib/audioManager'
 
 
 interface DemographicsPageProps {
@@ -28,22 +30,25 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
   const [gender, setGender] = useState<Gender | null>(null);
   const [locationType, setLocationType] = useState<Location | null>(null);
   const [educationLevel, setEducationLevel] = useState<EducationLevel | null>(null);
-  const demographicsGuideText =
-  `
-    ต่อไปเป็นหน้าข้อมูลพื้นฐานนะครับ
-    หน้านี้มีคำถามทั้งหมด 5 ข้อ
-    กรุณาค่อย ๆ ตอบทีละข้อนะครับ
+  // const demographicsGuideText =
+  // `
+  //   ต่อไปเป็นหน้าข้อมูลพื้นฐานนะครับ
+  //   หน้านี้มีคำถามทั้งหมด 5 ข้อ
+  //   กรุณาค่อย ๆ ตอบทีละข้อนะครับ
 
-    เริ่มจาก พิมพ์ว่าขณะนี้ท่านอยู่ที่ไหน
-    จากนั้น กรอกอายุ
-    เลือกระดับการศึกษา
-    เลือกเพศ
-    และเลือกประเภทสถานที่ที่ท่านอยู่ในปัจจุบัน
+  //   เริ่มจาก พิมพ์ว่าขณะนี้ท่านอยู่ที่ไหน
+  //   จากนั้น กรอกอายุ
+  //   เลือกระดับการศึกษา
+  //   เลือกเพศ
+  //   และเลือกประเภทสถานที่ที่ท่านอยู่ในปัจจุบัน
 
-    เมื่อกรอกข้อมูลครบแล้ว
-    กรุณากดปุ่ม “ไปหน้าถัดไป” ด้านล่างได้เลยครับ
-  `
-  const { isSpeaking, replay } = useVoiceGuide(demographicsGuideText)
+  //   เมื่อกรอกข้อมูลครบแล้ว
+  //   กรุณากดปุ่ม “ไปหน้าถัดไป” ด้านล่างได้เลยครับ
+  // `
+  // const { isSpeaking, replay } = useVoiceGuide(demographicsGuideText)
+
+  const { isSpeaking } = useLocalVoiceGuide('/audio/demographic.mp3')
+  
   
   const isFormComplete =
     locationDescription.trim() !== '' &&
@@ -55,9 +60,9 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
   const sessionId = useAssessmentStore((s) => s.sessionId)
 
   const handleSubmit = async () => {
-     setIsLoading(true);
+    if (isLoading) return
 
-    if (!locationDescription.trim() || !age || !gender || !locationType || !educationLevel) {
+    if (!isFormComplete) {
       alert('กรุณากรอกข้อมูลให้ครบทุกข้อ')
       return
     }
@@ -67,9 +72,9 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
       return
     }
 
+    setIsLoading(true)
+
     try {
-      await sleep(500);
-      
       const result = await createDemographics({
         sessionId: sessionId,
         age_years: Number(age),
@@ -81,6 +86,7 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
 
       result.match(
         () => {
+          stopAudio()
           onSubmit({
             currentLocationDescription: locationDescription,
             age,
@@ -89,18 +95,17 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
             educationLevel,
           })
         },
-        (err) => {
-          console.log(err)
+        () => {
           alert('ไม่สามารถบันทึกข้อมูลพื้นฐานได้ กรุณาลองใหม่อีกครั้ง')
         }
       )
-    } catch (e) {
+    } catch {
       alert('เกิดข้อผิดพลาดของระบบ กรุณาลองใหม่')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
   }
-
+  
   return (
     <div className="w-full max-w-3xl mx-auto px-6 py-8 animate-fade-in pb-32">
       
@@ -256,7 +261,11 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
       <div className="mt-16 flex justify-center">
             <button 
               onClick={handleSubmit}
-              disabled={!isFormComplete}
+              disabled={
+                !isFormComplete ||
+                isLoading ||
+                isSpeaking
+              }
               className={`
                 w-full max-w-md
                 py-6 px-8 rounded-2xl 
@@ -264,9 +273,9 @@ export const DemographicsPage: React.FC<DemographicsPageProps> = ({ onSubmit }) 
                 flex items-center justify-center gap-3
                 transition-all duration-200
                 ${isLoading ? 'opacity-80 cursor-not-allowed' : 'hover:-translate-y-2'}
-                ${isFormComplete
-                  ? 'bg-primary hover:bg-primaryHover text-white shadow-lg hover:shadow-xl hover:-translate-y-1'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
+               ${(!isFormComplete || isLoading || isSpeaking)
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-primary hover:bg-primaryHover text-white'}
               `}
               
             >

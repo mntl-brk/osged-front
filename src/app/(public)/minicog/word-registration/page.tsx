@@ -6,7 +6,7 @@ import { useAssessmentStore } from '@/store/assessmentStore'
 import { getWordSetByEducation } from '@/lib/wordSets'
 import { createMiniCog } from '@/api/minicog/createMinicog'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function WordRegistrationRoute() {
   const router = useRouter()
@@ -18,7 +18,8 @@ export default function WordRegistrationRoute() {
   const currentWordSet = useAssessmentStore((s) => s.currentWordSet)
   const setCurrentWordSet = useAssessmentStore((s) => s.setCurrentWordSet)
   const startedRef = useRef(false)
-
+  
+  const [isMiniCogReady, setIsMiniCogReady] = useState(false)
   useEffect(() => {
     (async () => {
       if (!hasHydrated) return 
@@ -50,15 +51,15 @@ export default function WordRegistrationRoute() {
         })
 
         result.match(
-          () => {},
+          () => {
+            setIsMiniCogReady(true)
+          },
           (err) => {
             alert('ไม่สามารถเริ่ม Mini-Cog ได้')
             console.error(err)
-            startedRef.current = false // เผื่อ retry
+            startedRef.current = false
           }
         )
-
-        
       }
     })()
   }, [hasHydrated, demographics, sessionId, currentWordSet, router, setCurrentWordSet])

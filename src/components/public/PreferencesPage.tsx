@@ -1,7 +1,8 @@
-import React from 'react';
-import { Check, Type, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check, ArrowRight } from 'lucide-react';
 import { FontSize } from '@/types';
-import { useVoiceGuide } from '@/hooks/useVoiceGuide';
+import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
+import { stopAudio } from '@/lib/audioManager';
 
 interface PreferencesPageProps {
   currentFontSize: FontSize;
@@ -14,11 +15,23 @@ export const PreferencesPage: React.FC<PreferencesPageProps> = ({
   setFontSize,
   onContinue,
 }) => {
-  const preferencesGuideText =
-  'ต่อไปเป็นหน้าตั้งค่าการใช้งานครับ กรุณาเลือกขนาดตัวอักษรที่ท่านอ่านได้สบายที่สุด โดยสามารถเลือกได้ว่า เล็ก. ปกติ หรือ ใหญ่ ด้านล่างจะมีตัวอย่างข้อความให้ลองอ่าน หากเลือกเรียบร้อยแล้ว กรุณากดปุ่ม ดำเนินการต่อ เพื่อไปขั้นตอนถัดไปครับ'
+  // const preferencesGuideText =
+  // 'ต่อไปเป็นหน้าตั้งค่าการใช้งานครับ กรุณาเลือกขนาดตัวอักษรที่ท่านอ่านได้สบายที่สุด โดยสามารถเลือกได้ว่า เล็ก. ปกติ หรือ ใหญ่ ด้านล่างจะมีตัวอย่างข้อความให้ลองอ่าน หากเลือกเรียบร้อยแล้ว กรุณากดปุ่ม ดำเนินการต่อ เพื่อไปขั้นตอนถัดไปครับ'
 
-  const { isSpeaking, replay } = useVoiceGuide(preferencesGuideText)
+  // const { isSpeaking, replay } = useVoiceGuide(preferencesGuideText)
+const { isSpeaking } = useLocalVoiceGuide('/audio/preferences.mp3')
   
+const [isNavigating, setIsNavigating] = useState(false)
+const handleContinue = () => {
+  if (isSpeaking) return
+  if (isNavigating) return
+
+  setIsNavigating(true)
+
+  stopAudio()
+  onContinue()
+}
+
   return (
     <div className="flex flex-col items-center w-full max-w-3xl mx-auto px-6 py-24 animate-fade-in pb-32">
       
@@ -79,17 +92,21 @@ export const PreferencesPage: React.FC<PreferencesPageProps> = ({
       </section>
 
       <button 
-        onClick={onContinue}
-        className="
-          w-full max-w-md
-          bg-primary hover:bg-primaryHover text-white 
-          py-6 px-8 rounded-2xl 
-          text-2xl font-bold 
-          shadow-lg hover:shadow-xl hover:-translate-y-1
-          transform transition-all duration-200
-          flex items-center justify-center gap-3
-        "
-      >
+          onClick={handleContinue}
+          disabled={isSpeaking}
+          className={`
+            w-full max-w-md
+            py-6 px-8 rounded-2xl 
+            text-2xl font-bold 
+            shadow-lg transform transition-all duration-200
+            flex items-center justify-center gap-3
+            ${
+              isSpeaking
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-primary hover:bg-primaryHover text-white hover:shadow-xl hover:-translate-y-1'
+            }
+          `}
+        >
         <span>ดำเนินการต่อ</span>
         <ArrowRight size={32} strokeWidth={3} />
       </button>

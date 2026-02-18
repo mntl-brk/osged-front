@@ -17,6 +17,7 @@ interface Props {
   progressPercent: number
   sessionId: string
   onAnswer: (answer: boolean, mediaId?: string) => void
+  isSpeaking: boolean
 }
 
 export const TGDSAnswerPage: React.FC<Props> = ({
@@ -26,6 +27,7 @@ export const TGDSAnswerPage: React.FC<Props> = ({
   progressPercent,
   sessionId,
   onAnswer,
+  isSpeaking
 }) => {
   /* ================= STATE ================= */
 
@@ -39,7 +41,7 @@ export const TGDSAnswerPage: React.FC<Props> = ({
 
   const recognitionRef = useRef<any>(null)
   const listeningIntentRef = useRef(false)
-
+  const [isSubmitting, setIsSubmitting] = useState(false)
   /* ================= Upload Helper ================= */
 
  const uploadTGDSVideo = useCallback(
@@ -127,29 +129,26 @@ export const TGDSAnswerPage: React.FC<Props> = ({
   }
 
   /* ================= SPEECH RECOGNITION ================= */
-  const detectAnswer = (fullTranscript: string) => {
-    if (!fullTranscript) return null
+  const detectAnswer = (text: string) => {
+    if (!text) return null
 
-    const cleaned = fullTranscript
+    const cleaned = text
+      .toLowerCase()
       .replace(/\s+/g, '')
-      .replace(/ครับ|ค่ะ|นะ|จ้า/g, '')
+      .replace(/[.,!?]/g, '')
+      .replace(/ครับ|ค่ะ|นะ|จ้า|เลย|แหละ/g, '')
 
-    const tail = cleaned.slice(-8)
-
-    //  ตรวจ pattern รวมคำ
-    if (tail.endsWith('ไม่ใช่')) {
-      // ถ้า pattern ก่อนหน้าเป็น "หรือไม่ใช่"
-      if (cleaned.endsWith('หรือไม่ใช่')) {
-        return true   // แปลว่า "หรือไม่" + "ใช่"
-      }
-      return false
+    // ถ้าจบด้วย "หรือไม่" แสดงว่ายังอ่านคำถามอยู่
+    if (cleaned.endsWith('หรือไม่')) {
+      return null
     }
 
-    if (tail.endsWith('ใช่')) return true
+    if (cleaned.endsWith('ไม่ใช่')) return false
+    if (cleaned.endsWith('ใช่')) return true
 
     return null
   }
-
+  
   const createRecognition = () => {
     const SR =
       (window as any).SpeechRecognition ||
@@ -177,7 +176,7 @@ export const TGDSAnswerPage: React.FC<Props> = ({
     if (!answerPart) return
 
 
-    const detected = detectAnswer(fullTranscript)
+    const detected = detectAnswer(answerPart)
 
     if (detected !== null) {
       listeningIntentRef.current = false
@@ -220,32 +219,36 @@ export const TGDSAnswerPage: React.FC<Props> = ({
   const resetAnswer = async () => {
     recognitionRef.current?.abort()
     recognitionRef.current = null
-
+    accumulatedTranscriptRef.current = ''
     listeningIntentRef.current = false
     setFinalAnswer(null)
     setHasDetectedAnswer(false)
     setIsListening(false)
 
-    // 🔥 Hard reset video recording
+    // Hard reset video recording
+    setIsRecording(false)
     await restartRecording()
+    setIsRecording(true)
   }
 
   /* ================= SUBMIT ================= */
 
   const handleSubmit = async () => {
-    if (finalAnswer === null) return
+    if (finalAnswer === null || isSubmitting) return
+
+    setIsSubmitting(true)
 
     try {
       const mediaId = await stopRecordingAndUpload()
 
       if (mediaId) {
-        onAnswer(finalAnswer, mediaId)
-      } else {
-        alert('ไม่สามารถบันทึกวิดีโอได้')
+        await onAnswer(finalAnswer, mediaId)
       }
     } catch (e) {
       console.error(e)
       alert('เกิดข้อผิดพลาด')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -270,6 +273,8 @@ export const TGDSAnswerPage: React.FC<Props> = ({
       onResetAnswer={resetAnswer}
       onSubmitAnswer={handleSubmit}
       isUploading={isUploading}
+      isSubmitting={isSubmitting}
+      isSpeaking={isSpeaking}
     />
   )
 }

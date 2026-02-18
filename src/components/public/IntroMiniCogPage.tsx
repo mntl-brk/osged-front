@@ -1,25 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Brain, ArrowRight } from 'lucide-react';
 import { useVoiceGuide } from '@/hooks/useVoiceGuide';
+import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
+import { stopAudio } from '@/lib/audioManager';
 
 interface IntroMiniCogPageProps {
   onStart: () => void;
 }
 
 export const IntroMiniCogPage: React.FC<IntroMiniCogPageProps> = ({ onStart }) => {
-  const { status, isSpeaking } = useVoiceGuide(
-      `
-        ต่อไปจะเป็นการทดสอบความจำและการรู้คิดนะครับ
-        แบบทดสอบนี้มีทั้งหมด 3 ขั้นตอน
+  // const { status, isSpeaking } = useVoiceGuide(
+  //     `
+  //       ต่อไปจะเป็นการทดสอบความจำและการรู้คิดนะครับ
+  //       แบบทดสอบนี้มีทั้งหมด 3 ขั้นตอน
 
-        ขั้นแรก ผมจะให้ท่านฟังและพยายามจำคำ 3 คำ
-        ขั้นที่สอง จะให้ท่านวาดรูปหน้าปัดนาฬิกา
-        และขั้นสุดท้าย จะขอให้ท่านบอกคำ 3 คำที่จำไว้จากขั้นตอนแรกนะครับ
+  //       ขั้นแรก ผมจะให้ท่านฟังและพยายามจำคำ 3 คำ
+  //       ขั้นที่สอง จะให้ท่านวาดรูปหน้าปัดนาฬิกา
+  //       และขั้นสุดท้าย จะขอให้ท่านบอกคำ 3 คำที่จำไว้จากขั้นตอนแรกนะครับ
 
-        ไม่ต้องกังวลนะครับ ทำเท่าที่ทำได้
-        หากพร้อมแล้ว กรุณากดปุ่มด้านล่างเพื่อเริ่มทำแบบทดสอบได้เลยครับ
-      `
-  )
+  //       ไม่ต้องกังวลนะครับ ทำเท่าที่ทำได้
+  //       หากพร้อมแล้ว กรุณากดปุ่มด้านล่างเพื่อเริ่มทำแบบทดสอบได้เลยครับ
+  //     `
+  // )
+
+  const { isSpeaking } = useLocalVoiceGuide('/audio/minicogintro.mp3')
+  const [isNavigating, setIsNavigating] = useState(false)
+
+  const handleStart = () => {
+    if (isSpeaking || isNavigating) return
+
+    setIsNavigating(true)
+
+    stopAudio()
+    onStart()
+  }
 
 
   return (
@@ -56,24 +70,31 @@ export const IntroMiniCogPage: React.FC<IntroMiniCogPageProps> = ({ onStart }) =
       </div>
 
      <button
-        onClick={onStart}
-        disabled={isSpeaking}
+        onClick={handleStart}
+        disabled={isSpeaking || isNavigating}
         className={`
           w-full max-w-md
           py-5 px-8 rounded-2xl text-2xl font-bold
           flex items-center justify-center gap-3
           transition-all duration-200
           ${
-            isSpeaking
+            isSpeaking || isNavigating
               ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
               : 'bg-primary hover:bg-primaryHover text-white shadow-lg hover:-translate-y-1'
           }
         `}
       >
         <span>
-          {isSpeaking ? 'กำลังอธิบาย...' : 'เริ่มการทดสอบ'}
+          {isSpeaking
+            ? 'กำลังอธิบาย...'
+            : isNavigating
+            ? 'กำลังเริ่ม...'
+            : 'เริ่มการทดสอบ'}
         </span>
-        {!isSpeaking && <ArrowRight size={32} strokeWidth={3} />}
+
+        {!isSpeaking && !isNavigating && (
+          <ArrowRight size={32} strokeWidth={3} />
+        )}
       </button>
 
     </div>

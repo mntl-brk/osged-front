@@ -27,7 +27,8 @@ interface BaseTGDSLayoutProps {
   onResetAnswer?: () => void;
   onSubmitAnswer?: () => void;
   isUploading?: boolean
-
+  isSubmitting?: boolean
+  isSpeaking: boolean
 }
 
 export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
@@ -42,6 +43,8 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
   onResetAnswer,
   onSubmitAnswer,
   isUploading = false,
+  isSubmitting,
+  isSpeaking
 }) => {
   const hasFinalAnswer = Boolean(finalAnswerText);
 
@@ -133,38 +136,48 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
 
         {/* Main Mic Button */}
         {!hasFinalAnswer && (
-          <button
-            onClick={onToggleListening}
-            className={`
-              w-full py-6 rounded-[35px]
-              flex items-center justify-center gap-6
-              text-4xl font-black shadow-2xl transition-all
-              ${
-                isListening
-                  ? 'bg-red-600 text-white animate-pulse'
-                  : 'bg-primary text-white hover:bg-primaryHover'
-              }
-            `}
-          >
-            {isListening ? (
-              <>
-                <StopCircle size={38} />
-                กดเมื่อพูดจบ
-              </>
-            ) : (
-              <>
-                <Mic size={38} />
-                พูด
-              </>
-            )}
-          </button>
-        )}
+        <button
+          disabled={isSubmitting || isUploading || isSpeaking}
+          onClick={isSpeaking ? undefined : onToggleListening}
+          className={`
+            w-full py-6 rounded-[35px]
+            flex items-center justify-center gap-6
+            text-4xl font-black shadow-2xl transition-all
+            ${
+              isSpeaking
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : isSubmitting || isUploading
+                ? 'bg-gray-300 cursor-not-allowed'
+                : isListening
+                ? 'bg-red-600 text-white animate-pulse'
+                : 'bg-primary text-white hover:bg-primaryHover'
+            }
+          `}
+        >
+          {isSpeaking ? (
+            <>
+              <div className="w-6 h-6 border-4 border-gray-500 border-t-transparent rounded-full animate-spin" />
+              กำลังอธิบาย
+            </>
+          ) : isListening ? (
+            <>
+              <StopCircle size={38} />
+              กดเมื่อพูดจบ
+            </>
+          ) : (
+            <>
+              <Mic size={38} />
+              พูด
+            </>
+          )}
+        </button>
+      )}
 
         {/* After detected answer */}
         {!isListening && hasDetectedAnswer && (
           <div className="flex gap-2 w-full animate-fade-in-up">
             <button
-              disabled={isUploading}
+              disabled={isUploading || isSubmitting}
               onClick={onResetAnswer}
               className={`
                 flex-1 px-2 rounded-[30px]
@@ -183,7 +196,7 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
             </button>
 
             <button
-              disabled={isUploading}
+              disabled={isUploading || isSubmitting}
               onClick={onSubmitAnswer}
               className={`
                 flex-[2] py-4 rounded-[30px]
@@ -197,7 +210,7 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
                 }
               `}
             >
-              {isUploading ? (
+              {isUploading || isSubmitting ? (
                  <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>

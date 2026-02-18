@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { PatientRecord, Gender } from '@/types';
 import Link from 'next/link';
+import { NewtonLoaderOverlay } from '../loading';
 
 interface DoctorDashboardPageProps {
   onLogout: () => void;
@@ -116,10 +117,32 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
         return 'อื่นๆ';
     };
 
+    const [showLoader, setShowLoader] = useState(true)
+
+    useEffect(() => {
+    let timer: NodeJS.Timeout
+
+    if (!loading) {
+        timer = setTimeout(() => {
+        setShowLoader(false)
+        }, 600) 
+    } else {
+        setShowLoader(true)
+    }
+
+    return () => clearTimeout(timer)
+    }, [loading])
+
     {loading && (
-    <div className="p-8 text-center text-gray-400 font-bold">
-        กำลังโหลดข้อมูล...
-    </div>
+        <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+
+            <div className="relative">
+                <NewtonLoaderOverlay/>
+            </div>
+
+        </div>
+        </div>
     )}
 
     {error && (

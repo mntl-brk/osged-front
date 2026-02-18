@@ -5,6 +5,8 @@ import { useCameraRecorder } from '@/hooks/useCameraRecorder';
 import { createSession } from '@/api/sessions/createSession';
 import { useAssessmentStore } from '@/store/assessmentStore';
 import { sleep } from '@/hooks/useSleepPage';
+import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
+import { stopAudio } from '@/lib/audioManager';
 
 interface ConsentPageProps {
   onNext: () => void;
@@ -14,10 +16,12 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
   const [consent, setConsent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  const consentGuideText =
-    'สวัสดีครับ ต่อไปเป็นขั้นตอนการให้ความยินยอมในการเข้าร่วมการทดสอบนะครับ กรุณากดปุ่ม เริ่มอัดคลิป ก่อน เมื่อเริ่มอัดแล้ว ให้ค่อย ๆ อ่านเงื่อนไขการเก็บรวบรวมข้อมูล ในกรอบด้านบนออกเสียงให้ครบถ้วน เมื่ออ่านเสร็จแล้ว กดปุ่มหยุดบันทึก จากนั้น ติ๊กช่องยินยอมด้านล่าง แล้วกดปุ่มถัดไปได้เลยครับ'
+//   const consentGuideText =
+//     'สวัสดีครับ ต่อไปเป็นขั้นตอนการให้ความยินยอมในการเข้าร่วมการทดสอบนะครับ กรุณากดปุ่ม เริ่มอัดคลิป ก่อน เมื่อเริ่มอัดแล้ว ให้ค่อย ๆ อ่านเงื่อนไขการเก็บรวบรวมข้อมูล ในกรอบด้านบนออกเสียงให้ครบถ้วน เมื่ออ่านเสร็จแล้ว กดปุ่มหยุดบันทึก จากนั้น ติ๊กช่องยินยอมด้านล่าง แล้วกดปุ่มถัดไปได้เลยครับ'
 
-  const { isSpeaking, replay } = useVoiceGuide(consentGuideText)
+//   const { isSpeaking, replay } = useVoiceGuide(consentGuideText)
+
+  const { isSpeaking } = useLocalVoiceGuide('/audio/consent.mp3')
 
   const participantId = useAssessmentStore((s) => s.participantId)
   const setSessionId = useAssessmentStore((s) => s.setSessionId)
@@ -37,6 +41,8 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
     startCamera();
     return () => {
       stopRecording();
+      stopAudio()
+
     };
   }, []);
 
@@ -45,6 +51,11 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
     setIsLoading(true);
     await sleep(500);
     
+    if (isRecording) {
+        alert('กรุณาหยุดบันทึกก่อนกดถัดไป')
+        return
+    }
+
     if (!consent) {
         alert('กรุณากดยอมรับเงื่อนไขการเก็บรวบรวมข้อมูล')
         return
@@ -59,6 +70,7 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
         alert('กรุณาอัดวิดีโอยินยอม')
         return
     }
+
 
     try{
         //  สร้าง session
@@ -83,7 +95,7 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
                 alert('อัปโหลดวิดีโอไม่สำเร็จ')
                 return
             }
-
+            stopAudio()
             onNext()
             },
             () => {
@@ -223,6 +235,13 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
       <div className="mt-10 flex justify-center">
         <button 
           onClick={handleSubmit}
+          disabled={
+                !consent ||
+                !hasRecorded ||
+                isRecording ||
+                isSpeaking ||
+                isLoading
+                }
           className={`
             w-full max-w-md
             py-5 px-8 rounded-2xl 

@@ -6,6 +6,7 @@ import { RotateDeviceOverlay } from '../RotateDeviceOverlay';
 import { ClockDemoOverlay } from '../ClockDemoOverlay';
 import { ClockDrawingResult, ClockEvent } from '@/types/clockEvents';
 import { toPng } from 'html-to-image';
+import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
 
 interface AssessmentClockDrawingPageProps {
   onNext: (result: ClockDrawingResult) => void
@@ -50,7 +51,7 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
   const hasShownDemoRef = useRef(false);
   
   const startedAtRef = useRef<number>(Date.now())
-
+  const [isSubmitting, setIsSubmitting] = useState(false)
   //เก็บ log
   const eventsRef = useRef<ClockEvent[]>([])
   const logEvent = (event: ClockEvent) => {
@@ -66,18 +67,45 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
   const lastMoveAngleRef = useRef<number | null>(null)
 
 
-  const { isSpeaking } = useVoiceGuide(
-      'ต่อไปจะเป็นการสร้างนาฬิกานะครับ กรุณาลากตัวเลขและเข็มนาฬิกา ทางกล่องด้านขวามือของหน้าจอ เพื่อบอกเวลา สิบเอ็ดนาฬิกา สิบ นาที ค่อย ๆ ทำ ไม่ต้องรีบครับ',
+  // const { isSpeaking } = useVoiceGuide(
+  //     'ต่อไปจะเป็นการสร้างนาฬิกานะครับ กรุณาลากตัวเลขและเข็มนาฬิกา ทางกล่องด้านขวามือของหน้าจอ เพื่อบอกเวลา สิบเอ็ดนาฬิกา สิบ นาที ค่อย ๆ ทำ ไม่ต้องรีบครับ',
+  //   {
+  //     autoPlay: true,
+  //     onEnd: () => {
+  //       if (!hasShownDemoRef.current) {
+  //         setShowDemo(true);
+  //         hasShownDemoRef.current = true;
+  //       }
+  //     },
+  //   }
+  // );
+
+    const { isSpeaking } = useLocalVoiceGuide(
+    '/audio/minicog_clock.mp3',
+    true, // autoPlay
     {
-      autoPlay: true,
       onEnd: () => {
         if (!hasShownDemoRef.current) {
-          setShowDemo(true);
-          hasShownDemoRef.current = true;
+          setShowDemo(true)
+          hasShownDemoRef.current = true
         }
       },
     }
-  );
+  )
+
+  useEffect(() => {
+    const handleGlobalPointerUp = () => {
+      if (draggingId !== null) {
+        handlePointerUp()
+      }
+    }
+
+    window.addEventListener('pointerup', handleGlobalPointerUp)
+
+    return () => {
+      window.removeEventListener('pointerup', handleGlobalPointerUp)
+    }
+  }, [draggingId])
 
 
   const captureClockArea = async () => {
@@ -161,33 +189,7 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
 
-    const radians = Math.atan2(e.clientY - centerY, e.clientX - centerX);
-    let angle = (radians * 180) / Math.PI + 90;
-    if (angle < 0) angle += 360;
-
-    if (lastAngleRef.current === null) {
-      lastAngleRef.current = angle;
-      return;
-    }
-
-    let delta = angle - lastAngleRef.current;
-    if (delta > 180) delta -= 360;
-    if (delta < -180) delta += 360;
-
-    lastAngleRef.current = angle;
-
-    if (draggingId === 'hour') {
-      setHourHand(prev => ({ ...prev, angle: prev.angle + delta }));
-    }
-
-    if (draggingId === 'minute') {
-      setMinuteHand(prev => ({ ...prev, angle: prev.angle + delta }));
-    }
-
     if (draggingId === 'hour' || draggingId === 'minute') {
-      const centerX = rect.left + rect.width / 2
-      const centerY = rect.top + rect.height / 2
-
       const radians = Math.atan2(e.clientY - centerY, e.clientX - centerX)
       let angle = (radians * 180) / Math.PI + 90
       if (angle < 0) angle += 360
@@ -305,6 +307,7 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
     setNumbers(prev => prev.map(n => ({ ...n, isPlaced: false })));
     setHourHand({ type: 'hour', angle: 0, isPlaced: false });
     setMinuteHand({ type: 'minute', angle: 0, isPlaced: false });
+    historyRef.current = []
   };
 
   const handleBack = () => {
@@ -756,11 +759,13 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
      <div className={`${isCompactLandscape ? 'mt-2' : 'mt-14'} w-full max-w-sm`}>
        <button
           onClick={async () => {
-            if (isSpeaking) return
-
+            if (isSpeaking || isSubmitting) return
+            setIsSubmitting(true)
+          
+          try {
             const finalImage = await captureClockArea()
             const finishedAt = Date.now()
-
+      
             onNext({
               final_image: finalImage,
               events: eventsRef.current,
@@ -770,20 +775,30 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
                 duration_ms: finishedAt - startedAtRef.current,
               },
             })
+          }
+          finally{
+            setIsSubmitting(false)
+          }
           }}
-          disabled={isSpeaking}
+          disabled={isSpeaking || isSubmitting}
           className={`
             w-full h-24 rounded-3xl text-3xl font-black
             flex items-center justify-center gap-4
             transition-all shadow-xl
-            ${
-              isSpeaking
+           ${
+              isSpeaking || isSubmitting
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 : 'bg-primary hover:bg-primaryHover text-white hover:-translate-y-2'
             }
           `}
         >
-          <span>{isSpeaking ? 'กำลังอธิบาย...' : 'เสร็จสิ้น'}</span>
+          <span>
+            {isSpeaking
+              ? 'กำลังอธิบาย...'
+              : isSubmitting
+              ? 'กำลังบันทึก...'
+              : 'เสร็จสิ้น'}
+          </span>
           <ArrowRight size={40} strokeWidth={4} />
         </button>
       </div>

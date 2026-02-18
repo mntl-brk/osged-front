@@ -1,6 +1,7 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Heart, ArrowRight } from 'lucide-react';
 import { useVoiceGuide } from '@/hooks/useVoiceGuide';
+import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
 
 interface IntroTGDSPageProps {
   onStart: () => void;
@@ -10,13 +11,16 @@ export const IntroTGDSPage: React.FC<IntroTGDSPageProps> = ({ onStart }) => {
   const hasSpokenGuideRef = useRef(false);
 
   /* ================= AI GUIDE ================= */
-   const { status, isSpeaking } = useVoiceGuide(
-        `
-        ต่อไปจะเป็นคำถามเกี่ยวกับความรู้สึกของท่านในช่วงสัปดาห์ที่ผ่านมา
-        ไม่มีคำตอบที่ถูกหรือผิดนะครับ
-        ขอให้ตอบตามความรู้สึกจริงของตัวเอง
-      `
-    )
+  //  const { status, isSpeaking } = useVoiceGuide(
+  //       `
+  //       ต่อไปจะเป็นคำถามเกี่ยวกับความรู้สึกของท่านในช่วงสัปดาห์ที่ผ่านมา
+  //       ไม่มีคำตอบที่ถูกหรือผิดนะครับ
+  //       ขอให้ตอบตามความรู้สึกจริงของตัวเอง
+  //     `
+  //   )
+  const { isSpeaking } = useLocalVoiceGuide('/audio/intro_tgds.mp3')
+  const [isNavigating, setIsNavigating] = useState(false)
+
   /* ================= UI ================= */
   return (
     <div className="w-full max-w-3xl mx-auto px-6 py-12 animate-fade-in flex flex-col items-center justify-center min-h-[60vh] text-center">
@@ -52,8 +56,12 @@ export const IntroTGDSPage: React.FC<IntroTGDSPageProps> = ({ onStart }) => {
 
       {/* Start Button */}
       <button 
-        onClick={onStart}
-        disabled={isSpeaking}
+       onClick={() => {
+          if (isSpeaking || isNavigating) return
+          setIsNavigating(true)
+          onStart()
+        }}
+        disabled={isSpeaking || isNavigating}
         className={`
           w-full max-w-md
           py-5 px-8 rounded-2xl 
