@@ -80,10 +80,17 @@ export const playAudioBlob = (
     onEnded?.()
   }
 
-  currentAudio.play()
+  currentAudio.play().catch((err) => {
+    if (err.name !== 'AbortError') {
+      console.warn('Audio play error:', err)
+    }
+    setAudioIdle()
+  })
 }
 
 export const stopAudio = () => {
+  if (!currentAudio) return
+
   if (currentAudio) {
     currentAudio.pause()
     currentAudio.currentTime = 0
