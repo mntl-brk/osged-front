@@ -33,6 +33,10 @@ export async function POST(
 
   const backendRes = await fetch(backendUrl, {
     method: 'POST',
+    headers: {
+      'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID!,
+      'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET!,
+    },
     body: f,
   })
 

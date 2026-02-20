@@ -5,9 +5,15 @@ import { Media } from '@/types/media'
 
 export const uploadMedia = (payload: {
   sessionId: string
-  purpose:  'consent_video' | 'minicog_clock_video' | 'minicog_clock_image' | 'minicog_clock_events' | 'tgds_test'
-  file: Blob,
-  questionNo?: number 
+  purpose:
+    | 'consent_video'
+    | 'minicog_clock_video'
+    | 'minicog_clock_image'
+    | 'minicog_clock_events'
+    | 'tgds_test'
+    | 'tgds_audio'      
+  file: Blob
+  questionNo?: number
 }) => {
   const { file } = payload
 
@@ -25,21 +31,25 @@ export const uploadMedia = (payload: {
       const form = new FormData()
 
       let filename = 'file'
+
       if (purpose === 'minicog_clock_video') filename = 'clock.webm'
       if (purpose === 'minicog_clock_image') filename = 'clock.png'
       if (purpose === 'minicog_clock_events') filename = 'events.json'
       if (purpose === 'tgds_test') filename = 'tgds.webm'
+      if (purpose === 'tgds_audio') filename = 'tgds_audio.webm'
 
       form.append('file', file, filename)
 
       let url = `/api/media/upload/${purpose}/${sessionId}`
 
-      if (purpose === 'tgds_test' && payload.questionNo) {
-      url += `?question_no=${payload.questionNo}`
+      if (
+        (purpose === 'tgds_test' || purpose === 'tgds_audio') &&
+        payload.questionNo
+      ) {
+        url += `?question_no=${payload.questionNo}`
       }
 
       return await postForm<Media>(url, form)
-      
     }
   )
 }

@@ -9,8 +9,13 @@ export async function requireAdmin() {
   const res = await fetch(
     `${process.env.BACKEND_API_URL}/admin/me`,
     {
-      headers: { Cookie: `access_token=${token}` },
+      headers: { 
+        Cookie: `access_token=${token}`,
+        'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID!,
+        'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET!,
+     },
       cache: 'no-store',
+      
     }
   )
 

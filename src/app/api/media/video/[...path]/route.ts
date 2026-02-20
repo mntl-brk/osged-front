@@ -4,17 +4,19 @@ export async function GET(
   req: NextRequest,
   context: { params: Promise<{ path: string[] }> }
 ) {
+
   const { path } = await context.params
+
   const filePath = path.join('/')
 
   const backendRes = await fetch(
     `${process.env.BACKEND_API_URL}/doctor/video/${filePath}`,
     {
       headers: {
-        cookie: req.headers.get('cookie') || '',
+        'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID!,
+        'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET!,
         range: req.headers.get('range') || '',
       },
-      cache: 'no-store',
     }
   )
 

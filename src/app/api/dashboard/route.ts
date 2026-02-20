@@ -22,7 +22,12 @@ export async function GET(req: NextRequest) {
 
   const backendRes = await fetch(url, {
     method: 'GET',
+    headers: {
+      'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID!,
+      'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET!,
+    },
     cache: 'no-store',
+
   })
 
   const payload = await backendRes.json()

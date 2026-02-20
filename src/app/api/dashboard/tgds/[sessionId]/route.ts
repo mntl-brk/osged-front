@@ -15,6 +15,8 @@ export async function GET(
         method: 'GET',
         headers: {
           cookie: req.headers.get('cookie') ?? '',
+          'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID!,
+          'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET!,
         },
         cache: 'no-store', 
       }

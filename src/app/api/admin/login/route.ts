@@ -2,12 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-
+  
   const backendRes = await fetch(
     `${process.env.BACKEND_API_URL}/admin/login`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID!,
+        'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET!,
+      },
       body: JSON.stringify(body),
     }
   )

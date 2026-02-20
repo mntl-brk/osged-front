@@ -15,6 +15,8 @@ export async function POST(
     duplex: 'half',
     headers: {
       ...Object.fromEntries(req.headers),
+      'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID!,
+      'CF-Access-Client-Secret': process.env.CF_ACCESS_CLIENT_SECRET!,
     },
   } as any)
 

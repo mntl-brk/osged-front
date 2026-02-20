@@ -6,7 +6,8 @@ export const appendTGDSAnswer = async (payload: {
   session_id: string
   question_no: number
   answer: number
-  media_id?: string
+  video_media_id?: string
+  audio_media_id?: string
   response_time_ms?: number
 }) =>
   apiAction(
@@ -15,7 +16,8 @@ export const appendTGDSAnswer = async (payload: {
       session_id: string(),
       question_no: number(),
       answer: number(),
-      media_id: optional(string()),
+      video_media_id: optional(string()),
+      audio_media_id: optional(string()),
       response_time_ms: optional(number()),
     }),
     object({}),

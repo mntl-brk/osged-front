@@ -13,13 +13,11 @@ export interface SubmitWordRegistrationResponse {
 export async function submitWordRegistration(
   payload: SubmitWordRegistrationPayload
 ): Promise<SubmitWordRegistrationResponse> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/minicog/word-registration`, {
+
+  const res = await fetch(`/api/minicog/${payload.session_id}/word_registration`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify(payload),
-  })
+})
 
   if (!res.ok) {
     const text = await res.text()
