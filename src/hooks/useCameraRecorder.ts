@@ -7,6 +7,7 @@ export const useCameraRecorder = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const mimeTypeRef = useRef<string>('video/webm')
 
   const [isRecording, setIsRecording] = useState(false)
   const [hasRecorded, setHasRecorded] = useState(false)
@@ -22,9 +23,20 @@ export const useCameraRecorder = () => {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
+        video: {
+          width: { ideal: 640, max: 640 },
+          height: { ideal: 480, max: 480 },
+          frameRate: { ideal: 24, max: 30 },
+          facingMode: 'user',
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          channelCount: 1,
+        },
       })
+
+
 
       streamRef.current = stream
 
@@ -63,10 +75,20 @@ export const useCameraRecorder = () => {
 
     if (!streamRef.current) return
 
+    let mimeType = 'video/webm;codecs=vp8'
+
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = 'video/mp4'
+    }
+
+    mimeTypeRef.current = mimeType
+
     const recorder = new MediaRecorder(streamRef.current, {
-      mimeType: 'video/webm;codecs=vp9', // browser-safe
+      mimeType,
+      videoBitsPerSecond: 800_000, // ลดจาก 1Mbps
     })
 
+    
     mediaRecorderRef.current = recorder
     chunksRef.current = []
     setRecordedBlob(null)
@@ -79,7 +101,7 @@ export const useCameraRecorder = () => {
 
     recorder.onstop = () => {
       const blob = new Blob(chunksRef.current, {
-        type: 'video/webm',
+        type: mimeTypeRef.current,
       })
 
       setRecordedBlob(blob)

@@ -55,7 +55,6 @@ export const TGDSReadingPage: React.FC<Props> = ({
       progressPercent={progressPercent}
       questionText={question}
       isListening={isListening}
-      onToggleListening={toggleListening}
-    />
+      onToggleListening={toggleListening} isSpeaking={false}    />
   );
 };

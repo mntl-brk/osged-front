@@ -1,4 +1,9 @@
 import { requireAdmin } from "@/lib/auth";
+import ReactQueryProvider from "@/providers/ReactQueryProvider";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+const queryClient = new QueryClient()
+
 
 export default async function AdminLayout({
   children,
@@ -7,5 +12,9 @@ export default async function AdminLayout({
 }) {
    await requireAdmin()
 
-  return <div className="bg-gray-50">{children}</div>
+  return <div className="bg-gray-50">
+     <ReactQueryProvider>
+      {children}
+    </ReactQueryProvider>
+  </div>
 }

@@ -66,20 +66,6 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
 
   const lastMoveAngleRef = useRef<number | null>(null)
 
-
-  // const { isSpeaking } = useVoiceGuide(
-  //     'ต่อไปจะเป็นการสร้างนาฬิกานะครับ กรุณาลากตัวเลขและเข็มนาฬิกา ทางกล่องด้านขวามือของหน้าจอ เพื่อบอกเวลา สิบเอ็ดนาฬิกา สิบ นาที ค่อย ๆ ทำ ไม่ต้องรีบครับ',
-  //   {
-  //     autoPlay: true,
-  //     onEnd: () => {
-  //       if (!hasShownDemoRef.current) {
-  //         setShowDemo(true);
-  //         hasShownDemoRef.current = true;
-  //       }
-  //     },
-  //   }
-  // );
-
     const { isSpeaking } = useLocalVoiceGuide(
     '/audio/minicog_clock.mp3',
     true, // autoPlay
@@ -410,6 +396,30 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
     };
   };
 
+  const handleSubmit = async () => {
+  if (isSpeaking || isSubmitting) return
+
+  setIsSubmitting(true)
+
+  await new Promise(requestAnimationFrame)
+  await new Promise(resolve => setTimeout(resolve, 50))
+  try {
+    const finalImage = await captureClockArea()
+    const finishedAt = Date.now()
+
+    onNext({
+      final_image: finalImage,
+      events: eventsRef.current,
+      meta: {
+        started_at: startedAtRef.current,
+        finished_at: finishedAt,
+        duration_ms: finishedAt - startedAtRef.current,
+      },
+    })
+  } finally {
+    setIsSubmitting(false)
+  }
+}
 
   return (
     <>
@@ -758,28 +768,7 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
 
      <div className={`${isCompactLandscape ? 'mt-2' : 'mt-14'} w-full max-w-sm`}>
        <button
-          onClick={async () => {
-            if (isSpeaking || isSubmitting) return
-            setIsSubmitting(true)
-          
-          try {
-            const finalImage = await captureClockArea()
-            const finishedAt = Date.now()
-      
-            onNext({
-              final_image: finalImage,
-              events: eventsRef.current,
-              meta: {
-                started_at: startedAtRef.current,
-                finished_at: finishedAt,
-                duration_ms: finishedAt - startedAtRef.current,
-              },
-            })
-          }
-          finally{
-            setIsSubmitting(false)
-          }
-          }}
+          onClick={handleSubmit}
           disabled={isSpeaking || isSubmitting}
           className={`
             w-full h-24 rounded-3xl text-3xl font-black

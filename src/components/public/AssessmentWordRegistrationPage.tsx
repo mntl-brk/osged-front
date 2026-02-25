@@ -1,11 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Volume2, ArrowRight, RefreshCcw, Mic, StopCircle, CheckCircle, XCircle, Send, RotateCcw, VolumeX, Loader } from 'lucide-react';
 import { WordSet } from '@/types';
-import { stopAudio } from '@/lib/audioManager';
-import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
-import { isAudioUnlocked } from '@/lib/audioUnlock';
+import { playAudioUrl, playSequential, stopAudio, subscribeSpeaking } from '@/lib/audioManager';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
-import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
 import { submitWordRegistration } from '@/api/minicog/submitWordRegistration';
 import { useAssessmentStore } from '@/store/assessmentStore';
@@ -17,11 +14,6 @@ interface AssessmentWordRegistrationPageProps {
 }
 
 type CompleteStatus = 'correct' | 'attempted';
-interface RoundResult {
-  roundNumber: number;
-  transcript: string;
-  isCorrect: boolean;
-}
 
 export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistrationPageProps> = ({ 
   wordSet, 
@@ -31,50 +23,42 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
   // State
   const [hasPlayedAudio, setHasPlayedAudio] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [tempTranscript, setTempTranscript] = useState('');
-  const [rounds, setRounds] = useState<RoundResult[]>([]);
   const [completed, setCompleted] = useState(false);
   
-  const recognitionRef = useRef<any>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const fallbackTimeoutRef = useRef<number | null>(null);
   
   const hasSpokenMicGuide = useRef(false);
 
-  const transcriptBufferRef = useRef('');
   const hasSpokenCompletion = useRef(false);
 
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const hasSpoken = useRef(false);
+  const [isSpeaking, setIsAudioSpeaking] = useState(false)
 
-  const [isEncouraging, setIsEncouraging] = useState(false);
+    useEffect(() => {
+      return subscribeSpeaking(setIsAudioSpeaking)
+    }, []);
+
+    
+  const hasSpoken = useRef(false);
 
   const [autoReplay, setAutoReplay] = useState(false);
   const [attempt, setAttempt] = useState(1); // รอบที่ 1 หรือ 2
-  const [needReplay, setNeedReplay] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
 
   const [completeStatus, setCompleteStatus] = useState<CompleteStatus | null>(null);
   const sessionId = useAssessmentStore((s) => s.sessionId)
+  const [isWaitingMicGuide, setIsWaitingMicGuide] = useState(false)
 
+  const [introPlayed, setIntroPlayed] = useState(false)
 
-    // const {
-    //   isSpeaking: isGuideSpeaking,
-    // } = useVoiceGuide(
-    //     'ต่อไปเป็นการจำคำ ผมจะอ่านคำสามคำให้ฟัง ขอให้ตั้งใจฟังและจำคำเหล่านั้นไว้นะครับ เมื่อพร้อมแล้ว กดปุ่มลำโพงได้เลยครับ',
-    //   {
-    //     autoPlay: true,
-    //     allowReplay: true,
-    //   }
-    // )
-
-    const {
-      isSpeaking: isGuideSpeaking,
-    } = useLocalVoiceGuide(
+  const { isSpeaking: isGuideSpeaking } = useLocalVoiceGuide(
       '/audio/minicog_regis_intro.mp3',
-      true // autoPlay
+      !introPlayed,
+      {
+        allowReplay: false,
+        onEnd: () => setIntroPlayed(true)
+      }
     )
-  
+
     useEffect(() => {
       return () => {
         stopAudio();
@@ -94,128 +78,56 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
       maxWords: 3,
     });
 
-  // const speakWords = async () => {
-  //   if (hasPlayedAudio || isPlaying) return;
+    const speakWords = async () => {
+      if (hasPlayedAudio || isPlaying) return
 
-  //   const textToSpeak = `
-  //     คำที่หนึ่งคือ ${wordSet.words[0]}
-  //     คำที่สองคือ ${wordSet.words[1]}
-  //     และคำสุดท้ายคือ ${wordSet.words[2]}
-  //   `;
+      stopAudio()
 
-  //   setIsPlaying(true);
+      try {
+        setIsPlaying(true)
 
-  //   speakSequentialWithPreload(
-  //     textToSpeak,
-  //     () => {
-  //       setIsPlaying(false);
-  //       setHasPlayedAudio(true);
-  //     },
-  //     () => {
-  //       setIsPlaying(true);
-  //     }
-  //   );
-  // };
+        await playAudioUrl(
+          `/audio/minicog_wordset/wordset-${wordSet.id}.mp3`,
+          undefined,
+          { remember: false }
+        )
 
-  const speakWords = async () => {
-    if (hasPlayedAudio || isPlaying) return;
-
-    stopAudio(); 
-
-    setIsPlaying(true);
-
-    const audioPath = `/audio/minicog_wordset/wordset-${wordSet.id}.mp3`
-    const audio = new Audio(audioPath)
-
-    audio.onended = () => {
-      setIsPlaying(false)
-      setHasPlayedAudio(true)
-    }
-
-    audio.play().catch(() => {
-      setIsPlaying(false)
-    })
-  }
-
-//   useEffect(() => {
-//     if (!autoReplay) return;
-//     if (!isAudioUnlocked()) return;
-//     if (isPlaying) return;
-//     if (isEncouraging) return; 
-
-//     const textToSpeak = `
-//     ครั้งนี้ยังไม่ถูกต้องครับ… ไม่เป็นไรนะครับ…
-//     เดี๋ยวเราลองใหม่กันอีกครั้งนะครับ…
-//     ผมจะพูดให้ฟังอีกครั้งนะครับ
-
-//     คำที่หนึ่งคือ ${wordSet.words[0]}
-//     คำที่สองคือ ${wordSet.words[1]}
-//     และคำสุดท้ายคือ ${wordSet.words[2]}
-//     `;
-
-//     setIsPlaying(true);
-
-//     speakSequentialWithPreload(
-//       textToSpeak,
-//       () => {
-//         setIsPlaying(false);
-//         setHasPlayedAudio(true);
-//         setAutoReplay(false);   
-//       },
-//       () => {
-//         setIsPlaying(true);
-//       }
-//     );
-//  }, [autoReplay, isEncouraging]);
-  const playSequentialAudios = async (
-      paths: string[],
-      onEnd?: () => void
-    ) => {
-      for (const path of paths) {
-        await new Promise<void>((resolve, reject) => {
-          const audio = new Audio(path)
-
-          audio.onended = () => resolve()
-          audio.onerror = () => reject()
-
-          audio.play().catch(reject)
-        })
+        setHasPlayedAudio(true)
+      } finally {
+        setIsPlaying(false)
       }
-
-      onEnd?.()
     }
+      
+
+    const replayingRef = useRef(false)
 
     useEffect(() => {
       if (!autoReplay) return
-      if (!isAudioUnlocked()) return
-      if (isPlaying) return
-      if (isEncouraging) return
       if (completed) return
+      if (replayingRef.current) return
 
-      stopAudio();
-      setIsPlaying(true)
+      replayingRef.current = true
 
-      const encouragePath = '/audio/minicog_regis_2.mp3'
-      const wordsetPath = `/audio/minicog_wordset/wordset-${wordSet.id}.mp3`
+      const run = async () => {
+        try {
+         await playSequential(
+            [
+              '/audio/minicog_regis_2.mp3',
+              `/audio/minicog_wordset/wordset-${wordSet.id}.mp3`
+            ],
+            undefined,
+            { remember: false }
+          )
 
-      playSequentialAudios(
-        [encouragePath, wordsetPath],
-        () => {
-          setIsPlaying(false)
           setHasPlayedAudio(true)
           setAutoReplay(false)
+        } finally {
+          replayingRef.current = false
         }
-      ).catch(() => {
-        setIsPlaying(false)
-      })
+      }
 
-    }, [autoReplay, isEncouraging])
-
-  const skipAudio = () => {
-    setIsPlaying(false);
-    setHasPlayedAudio(true);
-    if (fallbackTimeoutRef.current) window.clearTimeout(fallbackTimeoutRef.current);
-  };
+      run()
+    }, [autoReplay, completed, wordSet.id])
 
   useEffect(() => {
     setHasPlayedAudio(false);
@@ -224,6 +136,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     reset();
     hasSpokenMicGuide.current = false;
     hasSpokenCompletion.current = false;
+    micGuideStartedRef.current = false
   }, [wordSet]);
 
   useEffect(() => {
@@ -238,33 +151,22 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
   const showPlayButton =
   attempt === 1 && !hasPlayedAudio && !completed;
   const showMicSection =
+
   !completed &&
   (
     (attempt === 1 && hasPlayedAudio) ||
     (attempt >= 2)
   );
+
   const showNextButton = completed;
-  // const textshowMicSection = 'ขอให้พูดคำทั้งสามคำที่ได้ยินเมื่อครู่นี้นะครับ พูดต่อเนื่องกันทั้ง 3 คำได้เลย ไม่ต้องหยุดรอ เมื่อพูดครบแล้ว กดปุ่มส่งคำตอบได้เลยครับ';
   const [hasPlayedMicGuide, setHasPlayedMicGuide] = useState(false);
 
-  // const {
-  //   isSpeaking: isMicGuideSpeaking,
-  // } = useVoiceGuide(
-  //   textshowMicSection,
-  //   {
-  //     autoPlay: showMicSection && !hasPlayedMicGuide,
-  //     allowReplay: false,
-  //     onEnd: () => {
-  //       setHasPlayedMicGuide(true);
-  //     },
-  //   }
-  // );
-
   const {
-  isSpeaking: isMicGuideSpeaking,
+    isSpeaking: isMicGuideSpeaking,
+    play: playMicGuide,
   } = useLocalVoiceGuide(
     '/audio/minicog_show_mic.mp3',
-    showMicSection && !hasPlayedMicGuide, // autoPlay
+    false, 
     {
       allowReplay: false,
       onEnd: () => {
@@ -280,7 +182,10 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     const loadState = async () => {
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/minicog/get_registration/${sessionId}`
+          `/api/minicog/${sessionId}/get_registration`,
+          {
+            method: 'GET'
+          }
         )
 
         if (!res.ok) return
@@ -309,114 +214,53 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     isPlaying ||
     isGuideSpeaking ||
     isMicGuideSpeaking ||
-    isEvaluating;
+    isEvaluating ||
+    isWaitingMicGuide;
    
 
-    useEffect(() => {
+  useEffect(() => {
     if (!completed) return
-    if (hasSpokenCompletion.current) return
     if (autoReplay) return
-    
-    hasSpokenCompletion.current = true
+    if (hasSpokenCompletion.current) return
 
-    stopAudio()
+    const run = async () => {
+      let audioPath = ''
 
-    let audioPath = ''
+      if (completeStatus === 'correct') {
+        audioPath = '/audio/minicog_complete_correct.mp3'
+      }
 
-    if (completeStatus === 'correct') {
-      audioPath = '/audio/minicog_complete_correct.mp3'
+      if (completeStatus === 'attempted') {
+        audioPath = '/audio/minicog_complete_attempted.mp3'
+      }
+
+      try {
+        await playAudioUrl(audioPath)
+        hasSpokenCompletion.current = true
+      } catch (err) {
+        console.warn('Completion audio failed', err)
+      }
     }
 
-    if (completeStatus === 'attempted') {
-      audioPath = '/audio/minicog_complete_attempted.mp3'
-    }
+    run()
+  }, [completed, completeStatus, autoReplay])
 
-    const audio = new Audio(audioPath)
+  const micGuideStartedRef = useRef(false)
 
-    setIsSpeaking(true)
+  useEffect(() => {
+    if (!showMicSection) return
+    if (micGuideStartedRef.current) return
 
-    audio.onended = () => {
-      setIsSpeaking(false)
-    }
+    const timer = setInterval(() => {
+      if (!isSpeaking) {
+        micGuideStartedRef.current = true
+        playMicGuide()
+        clearInterval(timer)
+      }
+    }, 200)
 
-    audio.play().catch(err => {
-      console.warn('Play failed', err)
-      setIsSpeaking(false)
-    })
-
-  }, [completed, completeStatus])
-
-  // useEffect(() => {
-  //   if (!completed) return;
-  //   if (hasSpokenCompletion.current) return;
-  //   if (!isAudioUnlocked()) return;
-
-  //   hasSpokenCompletion.current = true;
-
-  //   stopAudio();
-
-  //   let text = '';
-
-  //   if (completeStatus === 'correct') {
-  //     text = `
-  //       เยี่ยมมากครับ คุณจำคำได้ถูกต้องครบทั้งสามคำ
-  //       อย่าลืมจำคำเหล่านี้ไว้นะครับ
-  //       เดี๋ยวผมจะกลับมาถามใหม่อีกครั้ง
-  //     `;
-  //   }
-
-  //   if (completeStatus === 'attempted') {
-  //     text = `
-  //       ขอบคุณมากนะครับที่ตั้งใจทำแบบทดสอบ
-  //       อย่าลืมจำคำเหล่านี้ไว้นะครับ
-  //       เดี๋ยวผมจะกลับมาถามใหม่อีกครั้ง
-  //     `;
-  //   }
-
-  //   setIsSpeaking(true);
-  //   speakSequentialWithPreload(
-  //     text,
-  //     () => {
-  //       setIsSpeaking(false);
-  //     },
-  //     () => {
-  //       setIsSpeaking(true);
-  //     }
-  //   );
-  // }, [completed, completeStatus]);
-
-
-  // const evaluateAnswer = () => {
-  //   setIsEvaluating(false);
-    
-  //   const normalized = transcript.trim();
-  //   const isCorrect = wordSet.words.every((w) =>
-  //     normalized.includes(w)
-  //   );
-
-  //   if (isCorrect) {
-  //     setCompleteStatus('correct');
-  //     setCompleted(true);
-  //     return;
-  //   }
-
-  //   if (attempt === 1) {
-  //     setAttempt(2);
-  //     setAutoReplay(true);
-  //     setHasPlayedAudio(false);
-  //     reset();
-  //     return;
-  //   }
-
-  //   if (attempt === 2) {
-  //     setAttempt(3);
-  //     reset();
-  //     return;
-  //   }
-
-  //   setCompleteStatus('attempted');
-  //   setCompleted(true);
-  // };
+    return () => clearInterval(timer)
+  }, [showMicSection, isSpeaking])
 
   const evaluateAnswer = async () => {
     if (!sessionId || isEvaluating) return

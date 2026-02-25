@@ -15,10 +15,6 @@ export const PreferencesPage: React.FC<PreferencesPageProps> = ({
   setFontSize,
   onContinue,
 }) => {
-  // const preferencesGuideText =
-  // 'ต่อไปเป็นหน้าตั้งค่าการใช้งานครับ กรุณาเลือกขนาดตัวอักษรที่ท่านอ่านได้สบายที่สุด โดยสามารถเลือกได้ว่า เล็ก. ปกติ หรือ ใหญ่ ด้านล่างจะมีตัวอย่างข้อความให้ลองอ่าน หากเลือกเรียบร้อยแล้ว กรุณากดปุ่ม ดำเนินการต่อ เพื่อไปขั้นตอนถัดไปครับ'
-
-  // const { isSpeaking, replay } = useVoiceGuide(preferencesGuideText)
 const { isSpeaking } = useLocalVoiceGuide('/audio/preferences.mp3')
   
 const [isNavigating, setIsNavigating] = useState(false)

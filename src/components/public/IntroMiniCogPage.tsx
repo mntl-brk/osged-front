@@ -9,21 +9,7 @@ interface IntroMiniCogPageProps {
 }
 
 export const IntroMiniCogPage: React.FC<IntroMiniCogPageProps> = ({ onStart }) => {
-  // const { status, isSpeaking } = useVoiceGuide(
-  //     `
-  //       ต่อไปจะเป็นการทดสอบความจำและการรู้คิดนะครับ
-  //       แบบทดสอบนี้มีทั้งหมด 3 ขั้นตอน
-
-  //       ขั้นแรก ผมจะให้ท่านฟังและพยายามจำคำ 3 คำ
-  //       ขั้นที่สอง จะให้ท่านวาดรูปหน้าปัดนาฬิกา
-  //       และขั้นสุดท้าย จะขอให้ท่านบอกคำ 3 คำที่จำไว้จากขั้นตอนแรกนะครับ
-
-  //       ไม่ต้องกังวลนะครับ ทำเท่าที่ทำได้
-  //       หากพร้อมแล้ว กรุณากดปุ่มด้านล่างเพื่อเริ่มทำแบบทดสอบได้เลยครับ
-  //     `
-  // )
-
-  const { isSpeaking } = useLocalVoiceGuide('/audio/minicogintro.mp3')
+  const { isSpeaking } = useLocalVoiceGuide('/audio/minicogIntro.mp3')
   const [isNavigating, setIsNavigating] = useState(false)
 
   const handleStart = () => {

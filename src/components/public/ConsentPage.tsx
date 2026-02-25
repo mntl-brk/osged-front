@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FileText, Camera, Mic, Check, ArrowRight, Video, AlertCircle, PlayCircle, StopCircle, RefreshCcw } from 'lucide-react';
-import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 import { useCameraRecorder } from '@/hooks/useCameraRecorder';
 import { createSession } from '@/api/sessions/createSession';
 import { useAssessmentStore } from '@/store/assessmentStore';
 import { sleep } from '@/hooks/useSleepPage';
 import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
 import { stopAudio } from '@/lib/audioManager';
+import { isAudioUnlocked } from '@/lib/audioUnlock';
 
 interface ConsentPageProps {
   onNext: () => void;
@@ -21,7 +21,16 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
 
 //   const { isSpeaking, replay } = useVoiceGuide(consentGuideText)
 
-  const { isSpeaking } = useLocalVoiceGuide('/audio/consent.mp3')
+  const [guideFinished, setGuideFinished] = useState(false)
+  const { isSpeaking } = useLocalVoiceGuide(
+    '/audio/consent.mp3',
+    true,
+    {
+        onEnd: () => {
+        setGuideFinished(true)
+        },
+    }
+  )
 
   const participantId = useAssessmentStore((s) => s.participantId)
   const setSessionId = useAssessmentStore((s) => s.setSessionId)
@@ -37,14 +46,16 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
     stopRecording,
   } = useCameraRecorder()
 
-  useEffect(() => {
-    startCamera();
-    return () => {
-      stopRecording();
-      stopAudio()
+    useEffect(() => {
+    if (!guideFinished) return
 
-    };
-  }, []);
+    startCamera()
+
+    return () => {
+        stopRecording()
+        stopAudio()
+    }
+    }, [guideFinished])
 
 
   const handleSubmit = async () => {
@@ -186,11 +197,16 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
                         {!isRecording ? (
                             <button
                                 onClick={startRecording}
-                                className={`
+                                disabled={isSpeaking}
+                               className={`
                                     flex items-center gap-2 px-6 py-3 rounded-full font-bold text-lg shadow-md transition-all
-                                    ${hasRecorded 
-                                        ? 'bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50' 
-                                        : 'bg-red-500 text-white hover:bg-red-600 hover:scale-105'}
+                                    ${
+                                        isSpeaking
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : hasRecorded
+                                            ? 'bg-white text-gray-700 border-2 border-gray-300 hover:bg-gray-50'
+                                            : 'bg-red-500 text-white hover:bg-red-600 hover:scale-105'
+                                    }
                                 `}
                             >
                                 {hasRecorded ? <><RefreshCcw size={20}/> อัดใหม่</> : <><Camera size={20}/> เริ่มอัดคลิป</>}
@@ -249,7 +265,7 @@ export const ConsentPage: React.FC<ConsentPageProps> = ({ onNext }) => {
             shadow-lg 
             transform transition-all duration-200
             flex items-center justify-center gap-3
-            ${(consent && (hasRecorded || cameraError)) // Allow proceed if error to not block, or strict? Let's be strict but allow error bypass if logic demands, here strict on recorded unless error
+            ${(consent && (hasRecorded || cameraError)) 
                 ? 'bg-primary hover:bg-primaryHover text-white hover:shadow-xl hover:-translate-y-1' 
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'}
             ${isLoading ? 'opacity-80 cursor-not-allowed' : 'hover:-translate-y-2'}

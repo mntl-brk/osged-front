@@ -1,5 +1,6 @@
 import { getPatientDetail } from '@/api/dashboard/getPatientDetail'
 import PatientDetailClient from '@/components/admin/PatientDetailClient'
+import { serverFetch } from '@/lib/serverFetch'
 import { notFound } from 'next/navigation'
 
 interface PageProps {
@@ -8,17 +9,15 @@ interface PageProps {
   }>
 }
 
-export default async function ParticipantRoute( context : PageProps) {
+export default async function ParticipantRoute(context: PageProps) {
   const { id } = await context.params
 
-  const res = await fetch(
+  const res = await serverFetch(
     `${process.env.BACKEND_API_URL}/doctor/patients/${id}`,
     { cache: 'no-store' }
   )
 
-  if (!res.ok) {
-    notFound()
-  }
+  if (!res.ok) notFound()
 
   const patient = await res.json()
 

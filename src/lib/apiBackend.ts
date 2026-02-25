@@ -1,5 +1,3 @@
-const BACKEND_BASE = process.env.BACKEND_API_URL!
-
 export class BackendHttpError extends Error {
   constructor(
     public status: number,
@@ -13,11 +11,21 @@ export async function backendFetch<T>(
   path: string,
   options?: RequestInit
 ): Promise<T> {
+  const BACKEND_BASE = process.env.BACKEND_API_URL!
+  const id = process.env.CF_ACCESS_CLIENT_ID
+  const secret = process.env.CF_ACCESS_CLIENT_SECRET
+
+  if (!id || !secret) {
+    throw new Error('Cloudflare Access credentials missing')
+  }
+
   const res = await fetch(`${BACKEND_BASE}${path}`, {
     ...options,
     headers: {
       ...(options?.headers || {}),
       ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
+      'CF-Access-Client-Id': id,
+      'CF-Access-Client-Secret': secret,
     },
     cache: 'no-store',
   })

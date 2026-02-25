@@ -28,7 +28,9 @@ export default function PatientDetailClient({ patient }: Props) {
     const [clockScore, setClockScore] = useState<0 | 1 | 2 | null>(
         patient.miniCog.clockScore as 0 | 1 | 2 | null
     )
-
+    const tgdsAnswers = tgds?.answers ?? []
+    const hasCompleteTGDS = tgdsAnswers.length === 15   
+    
     const [openSections, setOpenSections] = useState({
     miniCog: true,
     tgds: true,
@@ -643,6 +645,7 @@ export default function PatientDetailClient({ patient }: Props) {
                     </div>
 
                     {/* SECTION 2: Mood (TGDS) */}
+
                     <div className="space-y-6">
                      <button
                         onClick={() => toggleSection('tgds')}
@@ -668,8 +671,15 @@ export default function PatientDetailClient({ patient }: Props) {
                         />
                         </button>
 
+                   
 
-                        {openSections.tgds && (
+                    {openSections.tgds && (
+                    <>
+                    {!hasCompleteTGDS ? (
+                        <div className="bg-white rounded-3xl border border-gray-100 p-10 text-center text-gray-400 font-bold shadow-sm">
+                        ยังไม่มีข้อมูล TGDS
+                        </div>
+                    ) : (
                         <div className="space-y-10 animate-fade-in">
                         <div className="bg-white rounded-[35px] border-2 border-gray-100 p-8 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-10">
                             {/* Score Display */}
@@ -738,14 +748,8 @@ export default function PatientDetailClient({ patient }: Props) {
                                     </div>
                                 </div>
 
-                                <button className="w-full bg-gray-900 text-white py-5 rounded-3xl font-black flex items-center justify-center gap-3 transition-all hover:bg-black shadow-xl active:scale-95">
-                                    <Video size={24} /> Coming Soon
-                                    {/* เล่นวิดีโอระหว่างประเมิน (TGDS Phase) */}
-                                </button>
                             </div>
                         </div>
-                    
-
                     <div className="space-y-8 mt-10">
                     <h4 className="text-xl font-black text-orange-900 flex items-center gap-2">
                         <Activity size={22} className="text-orange-500" />
@@ -753,7 +757,13 @@ export default function PatientDetailClient({ patient }: Props) {
                     </h4>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-6">
-                {tgds.answers.map((item) => {
+                
+                    {!tgds.answers || tgds.answers.length === 0 ? (
+                      <div className="col-span-full text-center text-gray-400 font-bold py-10">
+                        ยังไม่มีข้อมูล TGDS
+                    </div>
+                    ) :
+                    tgds.answers.map((item) => {
                     const question = TGDS_QUESTIONS.find(
                         (q) => q.id === item.question_no
                     )
@@ -833,10 +843,12 @@ export default function PatientDetailClient({ patient }: Props) {
 
                      </div>
                     )}
-
+                     </>
+                 )}
                 </div>
-
+                
                 </div>
+                
 
                 {/* Footer Section */}
                 <div className="p-10 border-t border-gray-100 bg-gray-50/50 rounded-b-[45px] flex flex-col md:flex-row justify-between items-center gap-6">

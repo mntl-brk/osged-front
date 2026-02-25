@@ -9,6 +9,7 @@ import React, {
 import { BaseTGDSLayout } from './BaseTGDSLayout'
 import { useTGDSRecordingUpload } from '@/hooks/useTGDSRecordingUpload'
 import { uploadMedia } from '@/api/media/uploadMedia'
+import { useTGDSAudioRecorder } from '@/hooks/useTGDSAudioRecorder'
 
 interface Props {
   question: string
@@ -16,7 +17,7 @@ interface Props {
   total: number
   progressPercent: number
   sessionId: string
-  onAnswer: (answer: boolean, mediaId?: string) => void
+  onAnswer: (answer: boolean, videoMediaId?: string, audioMediaId?: string) => void
   isSpeaking: boolean
 }
 
@@ -63,6 +64,25 @@ export const TGDSAnswerPage: React.FC<Props> = ({
     [sessionId, index]  
   )
 
+const uploadTGDSSound = useCallback(
+  async (blob: Blob): Promise<string> => {
+    const result = await uploadMedia({
+      sessionId,
+      purpose: 'tgds_audio',
+      questionNo: index + 1,
+      file: blob,
+    })
+
+    return result.match(
+      (media) => media.media_id,
+      (error) => {
+        throw error
+      }
+    )
+  },
+  [sessionId, index]
+)
+
   /* ================= RECORDING HOOK (เรียกครั้งเดียว) ================= */
 
   const {
@@ -74,6 +94,13 @@ export const TGDSAnswerPage: React.FC<Props> = ({
     uploadFn: uploadTGDSVideo,
   })
 
+
+  const {
+    start: startAudio,
+    stop: stopAudio,
+    isRecording: isAudioRecording,
+  } = useTGDSAudioRecorder()
+
   /* ================= START RECORDING WHEN QUESTION LOADS ================= */
 
   useEffect(() => {
@@ -84,50 +111,50 @@ export const TGDSAnswerPage: React.FC<Props> = ({
     }
   }, [question])
 
+  
   /* ================= RESET STATE WHEN QUESTION CHANGES ================= */
 
   useEffect(() => {
     resetAnswer()
   }, [question])
 
-  const normalize = (s: string) =>
-    s
+
+  const processTranscriptForAnswer = (fullTranscript: string) => {
+    if (!fullTranscript) return null
+
+    // 1. ทำความสะอาดข้อความและตัดคำสร้อย (เพิ่มคำที่ผู้สูงอายุมักใช้)
+    let cleaned = fullTranscript
       .toLowerCase()
       .replace(/\s+/g, '')
       .replace(/[.,!?]/g, '')
+      .replace(/ครับ|ค่ะ|จ้ะ|จ้า|นะ|เลย|แหละ|หรอก|ลูก|หลาน/g, '')
 
-  const extractAnswerPart = (fullTranscript: string, questionText: string) => {
-    const t = normalize(fullTranscript)
-    const q = normalize(questionText)
-
-    const index = t.indexOf(q)
-
-    if (index === -1) return null
-
-    // ตัดคำถามออก
-    const afterQuestion = t.substring(index + q.length)
-
-    return afterQuestion
-  }
-
-  const isQuestionSpoken = (transcript: string, questionText: string) => {
-    const t = normalize(transcript)
-    const q = normalize(questionText)
-
-    let matchCount = 0
-
-    for (let i = 0; i < q.length - 2; i++) {
-      const chunk = q.substring(i, i + 3)
-      if (t.includes(chunk)) {
-        matchCount++
-      }
+    // 2. ถ้าผู้สูงอายุอ่านคำถามด้วย (มีคำว่า 'หรือไม่') ให้ตัดข้อความข้างหน้าทิ้ง เอาเฉพาะสิ่งที่พูดหลัง 'หรือไม่'
+    if (cleaned.includes('หรือไม่')) {
+      const parts = cleaned.split('หรือไม่')
+      cleaned = parts[parts.length - 1] // เอาส่วนสุดท้ายหลัง 'หรือไม่'
     }
 
-    const ratio = matchCount / (q.length - 2)
+    // ถ้าพูดแค่คำถามแล้วหยุด 'cleaned' จะกลายเป็น string ว่างเปล่า
+    if (!cleaned) return null
 
-    return ratio >= 0.5   
+    // 3. เช็คคำปฏิเสธ (Negative) -> ต้องเช็คก่อน!
+    // ครอบคลุม: ไม่ใช่, ไม่มี, ไม่จริง, ไม่เป็น, ไม่ได้, เปล่า
+    const negativeRegex = /ไม่(ใช่|มี|จริง|เป็น|ได้|ค่อย)|เปล่า/
+    if (negativeRegex.test(cleaned)) {
+      return false
+    }
+
+    // 4. เช็คคำตอบรับ (Positive)
+    // ครอบคลุม: ใช่, มี, จริง, เป็น, ถูก, ลด (สำหรับข้อลดกิจกรรม)
+    const positiveRegex = /ใช่|มี|จริง|เป็น|ถูก|ลด/
+    if (positiveRegex.test(cleaned)) {
+      return true
+    }
+
+    return null
   }
-
+  
   /* ================= SPEECH RECOGNITION ================= */
   const detectAnswer = (text: string) => {
     if (!text) return null
@@ -148,7 +175,7 @@ export const TGDSAnswerPage: React.FC<Props> = ({
 
     return null
   }
-  
+
   const createRecognition = () => {
     const SR =
       (window as any).SpeechRecognition ||
@@ -160,32 +187,24 @@ export const TGDSAnswerPage: React.FC<Props> = ({
     rec.interimResults = false
 
  
-  rec.onresult = (e: any) => {
-    // ดึง result ล่าสุด
-    const result = e.results[e.results.length - 1]
-    const transcript = result[0].transcript.trim()
+    rec.onresult = (e: any) => {
+      const result = e.results[e.results.length - 1]
+      const transcript = result[0].transcript.trim()
 
-    // สะสมข้อความ
-    accumulatedTranscriptRef.current += ' ' + transcript
+      accumulatedTranscriptRef.current += ' ' + transcript
+      const fullTranscript = accumulatedTranscriptRef.current
 
-    const fullTranscript = accumulatedTranscriptRef.current
+      // ใช้ฟังก์ชันใหม่ประมวลผล
+      const detected = processTranscriptForAnswer(fullTranscript)
 
-
-    const answerPart = extractAnswerPart(fullTranscript, question)
-
-    if (!answerPart) return
-
-
-    const detected = detectAnswer(answerPart)
-
-    if (detected !== null) {
-      listeningIntentRef.current = false
-      setFinalAnswer(detected)
-      setHasDetectedAnswer(true)
-      setIsListening(false)
-      rec.stop()
+      if (detected !== null) {
+        listeningIntentRef.current = false
+        setFinalAnswer(detected)
+        setHasDetectedAnswer(true)
+        setIsListening(false)
+        rec.stop()
+      }
     }
-  }
 
     rec.onend = () => {
       if (listeningIntentRef.current && !hasDetectedAnswer) {
@@ -200,16 +219,22 @@ export const TGDSAnswerPage: React.FC<Props> = ({
 
   /* ================= ACTIONS ================= */
 
-  const toggleListening = () => {
+  const toggleListening = async () => {
     if (isListening) {
       listeningIntentRef.current = false
       recognitionRef.current?.stop()
+
+      await stopAudio()
       setIsListening(false)
+
     } else {
+      await startAudio()
+
       recognitionRef.current?.abort()
       recognitionRef.current = createRecognition()
       listeningIntentRef.current = true
       recognitionRef.current.start()
+
       setIsListening(true)
     }
   }
@@ -239,11 +264,17 @@ export const TGDSAnswerPage: React.FC<Props> = ({
     setIsSubmitting(true)
 
     try {
-      const mediaId = await stopRecordingAndUpload()
+      const videoMediaId = await stopRecordingAndUpload()
+      const audioBlob = await stopAudio()
 
-      if (mediaId) {
-        await onAnswer(finalAnswer, mediaId)
+      let audioMediaId: string | undefined
+
+      if (audioBlob) {
+        audioMediaId = await uploadTGDSSound(audioBlob)
       }
+
+      await onAnswer(finalAnswer, videoMediaId, audioMediaId)
+
     } catch (e) {
       console.error(e)
       alert('เกิดข้อผิดพลาด')
@@ -251,7 +282,6 @@ export const TGDSAnswerPage: React.FC<Props> = ({
       setIsSubmitting(false)
     }
   }
-
   /* ================= RENDER ================= */
 
   return (

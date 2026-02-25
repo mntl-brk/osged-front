@@ -4,7 +4,6 @@ import { Home, Phone, FileText, Activity, Brain, AlertCircle, ClipboardCheck, Cl
 interface ScorePageProps {
   recallScore: number | null; // Max 3
   moodScore: number | null;   // Max 15
-  clockImage: string | null;  // Base64 image
   onHome: () => void;
 }
 

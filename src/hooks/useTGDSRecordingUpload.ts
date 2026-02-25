@@ -3,37 +3,90 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 interface Options {
   enabled: boolean
   uploadFn: (blob: Blob) => Promise<string>
-  maxRetry?: number
 }
 
 export function useTGDSRecordingUpload({
   enabled,
   uploadFn,
-  maxRetry = 2,
 }: Options) {
   const streamRef = useRef<MediaStream | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const mimeTypeRef = useRef<string>('video/webm')
 
   const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  /* ================= Start Recording ================= */
+  /* ================= SAFE STOP ================= */
+
+  const stopStream = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop())
+      
+      streamRef.current = null
+    }
+  }, [])
+
+  const stopRecorder = useCallback(() => {
+    const recorder = recorderRef.current
+    if (!recorder) {
+      stopStream()
+      return
+    }
+
+    if (recorder.state !== 'inactive') {
+      recorder.stop()
+    }
+
+    recorderRef.current = null
+    stopStream()
+  }, [stopStream])
+
+  /* ================= START RECORDING ================= */
+
+  const getSupportedMimeType = () => {
+    const types = [
+      'video/mp4;codecs=h264',
+      'video/mp4',
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm',
+    ]
+
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        return type
+      }
+    }
+
+    return '' // browser default
+  }
 
   const startRecording = useCallback(async () => {
     chunksRef.current = []
     setError(null)
 
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user' },
-      audio: true,
+      video: {
+        width: { ideal: 640, max: 640 },
+        height: { ideal: 480, max: 480 },
+        frameRate: { ideal: 24, max: 30 },
+        facingMode: 'user',
+      },
+      audio: false,
     })
 
     streamRef.current = stream
 
-    const recorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm',
-    })
+    const mimeType = getSupportedMimeType()
+    mimeTypeRef.current = mimeType
+
+    const recorder = mimeType
+      ? new MediaRecorder(stream, {
+          mimeType,
+          videoBitsPerSecond: 800_000,
+        })
+      : new MediaRecorder(stream)
 
     recorder.ondataavailable = (e) => {
       if (e.data.size > 0) {
@@ -45,27 +98,41 @@ export function useTGDSRecordingUpload({
     recorderRef.current = recorder
   }, [])
 
+  /* ================= AUTO START ================= */
+
   useEffect(() => {
     if (!enabled) return
 
     startRecording()
 
     return () => {
-      streamRef.current?.getTracks().forEach(t => t.stop())
+      stopRecorder()
+      stopStream()
     }
-  }, [enabled, startRecording])
+  }, [enabled, startRecording, stopRecorder, stopStream])
 
-  /* ================= Stop + Upload ================= */
+  /* ================= STOP + UPLOAD ================= */
 
-  const stopAndUpload = async (): Promise<string | null> => {
+  useEffect(() => {
+    return () => {
+      stopRecorder()
+      stopStream()
+    }
+  }, [])
+
+  const stopAndUpload = async (): Promise<string | undefined> => {
     const recorder = recorderRef.current
-    if (!recorder) return null
+    if (!recorder) return undefined
 
     setIsUploading(true)
 
     const blob = await new Promise<Blob>((resolve) => {
       recorder.onstop = () => {
-        resolve(new Blob(chunksRef.current, { type: 'video/webm' }))
+        resolve(
+          new Blob(chunksRef.current, {
+              type: mimeTypeRef.current || 'video/mp4',
+          })
+        )
       }
 
       if (recorder.state !== 'inactive') {
@@ -73,41 +140,32 @@ export function useTGDSRecordingUpload({
       }
     })
 
-    streamRef.current?.getTracks().forEach(t => t.stop())
+    stopStream()
+    recorderRef.current = null
 
     if (!blob || blob.size === 0) {
       setIsUploading(false)
-      return null
+      return undefined
     }
 
     try {
       const mediaId = await uploadFn(blob)
-      setIsUploading(false)
       return mediaId
     } catch {
-      setIsUploading(false)
       setError('upload_failed')
-      return null
+      return undefined
+    } finally {
+      setIsUploading(false)
     }
   }
-
   /* ================= HARD RESET ================= */
 
   const restartRecording = async () => {
-    const recorder = recorderRef.current
+    await stopRecorder()
+    stopStream()
 
-    if (recorder && recorder.state !== 'inactive') {
-      await new Promise<void>((resolve) => {
-        recorder.onstop = () => resolve()
-        recorder.stop()
-      })
-    }
-
-    streamRef.current?.getTracks().forEach(t => t.stop())
-
-    chunksRef.current = [] //  discard old clip
-
-    await startRecording() //  start fresh
+    chunksRef.current = []
+    await startRecording()
   }
 
   return {

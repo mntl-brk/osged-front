@@ -10,10 +10,6 @@ interface InstructionPageProps {
 }
 
 export const InstructionPage: React.FC<InstructionPageProps> = ({ onStart }) => {
-// const instructionGuideText =
-//   'ก่อนเริ่มทำแบบคัดกรองนะครับ. การประเมินนี้จะใช้เวลาประมาณ 10 ถึง 15 นาที แนะนำให้อยู่ในที่เงียบและมีแสงสว่างเพียงพอ เมื่อพร้อมแล้ว กรุณากดปุ่ม เริ่มทำแบบคัดกรอง ด้านล่าง เพื่อเริ่มต้นครับ'
-
-// const { isSpeaking, replay } = useVoiceGuide(instructionGuideText)
 
 const { isSpeaking } = useLocalVoiceGuide('/audio/instruction.mp3')
 
@@ -59,27 +55,6 @@ const handleStart = () => {
                 </div>
             </li>
 
-            {/* <li className="flex items-start gap-6">
-                 <div className="bg-orange-100 p-3 rounded-full text-orange-600 shrink-0 mt-1">
-                    <Users size={32} strokeWidth={2.5} />
-                </div>
-                <div>
-                    <span className="text-xl md:text-2xl font-medium text-gray-700 leading-relaxed block">
-                        ถ้ามีผู้ดูแล สามารถช่วย <span className="text-gray-900 font-semibold">อ่านคำสั่ง</span> ให้ได้
-                    </span>
-                </div>
-            </li> */}
-
-             {/* <li className="flex items-start gap-6">
-                 <div className="bg-purple-100 p-3 rounded-full text-purple-600 shrink-0 mt-1">
-                    <PauseCircle size={32} strokeWidth={2.5} />
-                </div>
-                <div>
-                    <span className="text-xl md:text-2xl font-medium text-gray-700 leading-relaxed block">
-                        หากไม่สะดวก สามารถหยุดและทำต่อในภายหลังได้
-                    </span>
-                </div>
-            </li> */}
         </ul>
       </div>
 

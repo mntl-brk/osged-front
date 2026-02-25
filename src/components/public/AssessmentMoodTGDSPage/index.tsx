@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { TGDS_QUESTIONS } from '@/data/tgdsQuestions';
 import { TGDSAnswerPage } from './TGDSAnswerPage';
-import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 import { appendTGDSAnswer } from '@/api/tgds/appendTGDSAnswer';
 import { useAssessmentStore } from '@/store/assessmentStore';
 import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
@@ -17,20 +16,10 @@ export const AssessmentMoodTGDSPage: React.FC<Props> = ({ onComplete }) => {
   const sessionId = useAssessmentStore((s) => s.sessionId)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingState, setIsLoadingState] = useState(true)
-  // useVoiceGuide(
-  //   `
-  //   เมื่อพร้อมแล้วคุณสามารถกดปุ่มพูด
-  //   อ่านคำถามแล้วตอบว่า “ใช่” หรือ “ไม่ใช่” ได้เลยครับ
-  //   `,
-  //   {
-  //     autoPlay: currentIdx === 0,
-  //     allowReplay: false,
-  //   }
-  // );
 
   const { isSpeaking } = useLocalVoiceGuide(
     '/audio/tgds_guide.mp3',
-    currentIdx === 0, // autoPlay เฉพาะข้อแรก
+    currentIdx === 0, 
     {
       allowReplay: false,
     }
@@ -42,9 +31,10 @@ export const AssessmentMoodTGDSPage: React.FC<Props> = ({ onComplete }) => {
 
 
   useEffect(() => {
-    if (!sessionId) return
+    if (!sessionId) return 
 
     const loadState = async () => {
+      
       try {
         const state = await getTGDSState({ session_id: sessionId })
 
@@ -75,48 +65,47 @@ export const AssessmentMoodTGDSPage: React.FC<Props> = ({ onComplete }) => {
     }
 
     loadState()
-  }, [sessionId, onComplete])
+  }, [sessionId])
 
   if (!sessionId) return null
   if (isLoadingState) return null
   if (currentIdx >= TGDS_QUESTIONS.length) return null
 
   const handleAnswer = async (
-    answer: boolean,
-    mediaId?: string
-  ) => {
-    if (!sessionId) return
-    if (isSaving) return
-    setIsSaving(true)
+  answer: boolean,
+  videoMediaId?: string,
+  audioMediaId?: string
+) => {
+  if (!sessionId) return
+  if (isSaving) return
 
-    // append to backend
-   try{
-      await appendTGDSAnswer({
-        session_id: sessionId,
-        question_no: currentIdx + 1, // TGDS ใช้ 1-based
-        answer: answer ? 1 : 0,
-        media_id: mediaId,
+  setIsSaving(true)
+
+  try {
+    await appendTGDSAnswer({
+      session_id: sessionId,
+      question_no: currentIdx + 1,
+      answer: answer ? 1 : 0,
+      video_media_id: videoMediaId,
+      audio_media_id: audioMediaId,  
+    })
+
+    const nextAnswers = [...answers, answer]
+    setAnswers(nextAnswers)
+
+    if (currentIdx < TGDS_QUESTIONS.length - 1) {
+      setCurrentIdx(i => i + 1)
+    } else {
+      let score = 0
+      nextAnswers.forEach((ans, i) => {
+        if (ans === TGDS_QUESTIONS[i].scoreTarget) score++
       })
-
-      // update local state
-      const nextAnswers = [...answers, answer]
-      setAnswers(nextAnswers)
-
-      // next / complete
-      if (currentIdx < TGDS_QUESTIONS.length - 1) {
-        setCurrentIdx(i => i + 1)
-      } else {
-        let score = 0
-        nextAnswers.forEach((ans, i) => {
-          if (ans === TGDS_QUESTIONS[i].scoreTarget) score++
-        })
-        onComplete(score)
-      }
+      onComplete(score)
     }
-    finally{
-      setIsSaving(false)
-    }
+  } finally {
+    setIsSaving(false)
   }
+}
 
   return (
     <TGDSAnswerPage
@@ -124,7 +113,8 @@ export const AssessmentMoodTGDSPage: React.FC<Props> = ({ onComplete }) => {
       index={currentIdx}
       total={TGDS_QUESTIONS.length}
       progressPercent={progressPercent}
-      onAnswer={handleAnswer} sessionId={sessionId}
+      onAnswer={handleAnswer} 
+      sessionId={sessionId}
       isSpeaking={isSpeaking}
     />
   );

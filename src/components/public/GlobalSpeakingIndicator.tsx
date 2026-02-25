@@ -9,22 +9,19 @@ import {
 import { useVoiceGuideControl } from '@/contexts/VoiceGuideContext'
 
 export const GlobalSpeakingIndicator = () => {
-  const { canReplay, ready } = useVoiceGuideControl()
+  const { canReplay, ready, enabled } = useVoiceGuideControl()
+
 
   const [status, setStatus] = useState<
     'idle' | 'preparing' | 'speaking'
   >('idle')
 
   useEffect(() => {
-    if (!ready || !canReplay) return
-
     const unsubscribe = subscribeAudioStatus(setStatus)
-    return () => {
-      unsubscribe()
-    }
-  }, [ready, canReplay])
+    return () => { unsubscribe() }
+  }, [])
 
-  if (!ready || !canReplay) return null
+  if (!ready || !enabled) return null
 
   if (status === 'idle') {
     return (
@@ -43,7 +40,7 @@ export const GlobalSpeakingIndicator = () => {
       </button>
     )
   }
-
+  if (status === 'preparing' || status === 'speaking') {
   return (
     <div
       className="
@@ -74,5 +71,5 @@ export const GlobalSpeakingIndicator = () => {
         </>
       )}
     </div>
-  )
+  )}
 }

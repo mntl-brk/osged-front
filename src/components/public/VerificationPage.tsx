@@ -33,6 +33,7 @@ export const VerificationPage: React.FC<VerificationPageProps> = ({ onSubmit }) 
     }
   };
 
+
   return (
     <div className="w-full max-w-2xl mx-auto px-6 py-12 animate-fade-in flex flex-col items-center justify-center min-h-[60vh]">
       <div className="bg-primary/10 p-8 rounded-[40px] text-primary mb-10 shadow-inner">

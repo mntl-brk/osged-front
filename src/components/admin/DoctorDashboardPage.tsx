@@ -22,7 +22,8 @@ import {
   ChevronRight,
   TrendingUp,
   // Added AlertCircle to fix missing import error
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from 'lucide-react';
 import { PatientRecord, Gender } from '@/types';
 import Link from 'next/link';
@@ -50,6 +51,9 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
+
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const fetchDashboard = async (
     searchValue = searchTerm,
@@ -129,9 +133,35 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
     } else {
         setShowLoader(true)
     }
+    
 
     return () => clearTimeout(timer)
     }, [loading])
+
+    const handleConfirmDelete = async () => {
+
+    if (!deleteTarget) return
+
+    setIsDeleting(true)
+
+    try {
+        const res = await fetch(`/api/dashboard/session/${deleteTarget}`, {
+            method: 'DELETE'
+        })
+
+        if (!res.ok) throw new Error('Delete failed')
+
+        setPatients(prev => prev.filter(p => p.id !== deleteTarget))
+        setDeleteTarget(null)
+
+    } catch (err) {
+        console.error(err)
+        alert('ลบไม่สำเร็จ')
+    } finally {
+        setIsDeleting(false)
+    }
+    }
+
 
     {loading && (
         <div className="min-h-screen bg-white flex flex-col items-center justify-center">
@@ -183,7 +213,7 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
         </div>
       </header>
 
-      <main className="flex-grow p-4 md:p-8 max-w-7xl mx-auto w-full">
+      <main className="flex-grow p-4 md:p-8 max-w-375 mx-auto w-full">
         {/* Stats Summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 flex items-center justify-between">
@@ -246,7 +276,7 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
                             <th className="p-6 text-center">Clock (Cog)</th>
                             <th className="p-6 text-center">Mood (TGDS)</th>
                             <th className="p-6 text-center">Status</th>
-                            <th className="p-6 text-right">Action</th>
+                            <th className="p-6 text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -260,7 +290,7 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
                                         <span className="text-xs text-gray-400">{mapGender(patient.demographics.sex)}</span>
                                     </div>
                                 </td>
-                                <td className="p-6 text-center">
+                                <td className="p-2 text-center">
                                 <div
                                     className={`inline-flex items-center gap-2 px-3 py-1 rounded-xl font-black ${
                                     patient.miniCog.recallScore < 2
@@ -292,27 +322,43 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
                                     </div>
                                 )}
                                 </td>
-                                <td className="p-6 text-center">
+                                <td className="p-4 text-center">
                                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-xl font-black ${patient.tgds.score >= 6 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
                                         <Activity size={16} />
                                         {patient.tgds.score}/15
                                     </div>
                                 </td>
-                                <td className="p-6 text-center">
+                                <td className="p-4 text-center">
                                     <span className={`px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase border ${patient.status === 'high-risk' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-600 border-green-200'}`}>
                                         {patient.status}
                                     </span>
                                 </td>
-                               <td className="p-6 text-right">
+                             <td className="p-6 text-center">
+                                <div className="flex justify-end gap-3">
+
+                                    {/* ดูรายละเอียด */}
                                     <Link
-                                        href={`/dashboard/patient/${patient.id}`}
-                                        className="bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white p-3 rounded-2xl font-bold text-sm transition-all shadow-sm flex items-center gap-2 ml-auto w-fit"
+                                    href={`/dashboard/patient/${patient.id}`}
+                                    className="bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white p-3 rounded-2xl font-bold text-sm transition-all shadow-sm flex items-center gap-2"
                                     >
-                                        <FileText size={20} />
-                                        <span className="hidden md:inline">เปิดดู</span>
+                                    <FileText size={20} />
+                                    <span className="hidden md:inline">เปิดดู</span>
                                     </Link>
-                                    </td>
+
+                                    {/* ปุ่มลบ */}
+                                  <button
+                                    onClick={() => setDeleteTarget(patient.id)}
+                                    className="bg-white border-2 border-red-500 text-red-600 hover:bg-red-600 hover:text-white p-3 rounded-2xl font-bold text-sm transition-all shadow-sm flex items-center gap-2"
+                                    >
+                                    <Trash2 size={20} />
+                                    <span className="hidden md:inline">ลบ</span>
+                                  </button>
+
+                                </div>
+                                </td>
+                                    
                             </tr>
+                            
                         ))}
                     </tbody>
                 </table>
@@ -373,6 +419,54 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
         </div>
       </main>
 
+        {deleteTarget && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+
+                {/* Background overlay */}
+                <div
+                className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+                onClick={() => !isDeleting && setDeleteTarget(null)}
+                />
+
+                {/* Modal box */}
+                <div className="relative bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md animate-fade-in">
+
+                <h2 className="text-2xl font-black text-gray-900 mb-4">
+                    ยืนยันการลบข้อมูล
+                </h2>
+
+                <p className="text-gray-600 mb-6">
+                    คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลนี้?
+                    การลบจะไม่สามารถย้อนกลับได้
+                </p>
+
+                <div className="flex justify-end gap-4">
+
+                    <button
+                    disabled={isDeleting}
+                    onClick={() => setDeleteTarget(null)}
+                    className="px-6 py-3 rounded-xl border-2 border-gray-300 text-gray-600 font-bold hover:bg-gray-50 transition"
+                    >
+                    ยกเลิก
+                    </button>
+
+                    <button
+                    disabled={isDeleting}
+                    onClick={handleConfirmDelete}
+                    className="px-6 py-3 rounded-xl bg-red-600 text-white font-black hover:bg-red-700 transition flex items-center gap-2"
+                    >
+                    {isDeleting && (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    )}
+                    ลบข้อมูล
+                    </button>
+
+                </div>
+                </div>
+            </div>
+            )}
     </div>
+
+    
   );
 };

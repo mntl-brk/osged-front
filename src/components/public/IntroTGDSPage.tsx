@@ -9,16 +9,11 @@ interface IntroTGDSPageProps {
 
 export const IntroTGDSPage: React.FC<IntroTGDSPageProps> = ({ onStart }) => {
   const hasSpokenGuideRef = useRef(false);
-
-  /* ================= AI GUIDE ================= */
-  //  const { status, isSpeaking } = useVoiceGuide(
-  //       `
-  //       ต่อไปจะเป็นคำถามเกี่ยวกับความรู้สึกของท่านในช่วงสัปดาห์ที่ผ่านมา
-  //       ไม่มีคำตอบที่ถูกหรือผิดนะครับ
-  //       ขอให้ตอบตามความรู้สึกจริงของตัวเอง
-  //     `
-  //   )
-  const { isSpeaking } = useLocalVoiceGuide('/audio/intro_tgds.mp3')
+  
+  const { isSpeaking } = useLocalVoiceGuide(
+    '/audio/intro_tgds.mp3',
+    true
+  )
   const [isNavigating, setIsNavigating] = useState(false)
 
   /* ================= UI ================= */

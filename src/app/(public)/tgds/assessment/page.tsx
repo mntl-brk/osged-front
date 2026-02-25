@@ -11,6 +11,11 @@ export default function TGDSAssessmentRoute() {
   const setMoodScore = useAssessmentStore((s) => s.setMoodScore)
   const sessionId = useAssessmentStore((s) => s.sessionId)
 
+  if (!sessionId) {
+      router.replace('/')
+      return
+  }
+
   return (
     <AppShell>
       <AssessmentMoodTGDSPage

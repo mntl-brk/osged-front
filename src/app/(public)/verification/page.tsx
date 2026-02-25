@@ -11,14 +11,18 @@ import { useEffect, useState } from 'react'
 export default function VerificationRoute() {
   const router = useRouter()
   const setParticipantId = useAssessmentStore((s) => s.setParticipantId)
-  const { setCanReplay } = useVoiceGuideControl()
 
   // const [showChromeWarning, setShowChromeWarning] = useState(false)
 
-  useEffect(() => {
-    setCanReplay(false)
-    return () => setCanReplay(true)
-  }, [])
+  const { setEnabled } = useVoiceGuideControl()
+  
+    useEffect(() => {
+      setEnabled(false)
+  
+      return () => {
+        setEnabled(true)
+      }
+    }, [])
 
   // useEffect(() => {
   //   const SR =

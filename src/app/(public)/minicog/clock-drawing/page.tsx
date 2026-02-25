@@ -40,65 +40,37 @@ export default function ClockDrawingRoute() {
   return (
     <AppShell>
      <AssessmentClockDrawingPage
-        onNext={async ({ final_image, events }) => {
-          if (!sessionId) return
+      onNext={async ({ final_image, events }) => {
+        if (!sessionId) return
 
-          // 1. stop camera
-          const videoBlob = await stopAndGetVideo()
+        const videoBlob = await stopAndGetVideo()
+        if (!videoBlob) return alert('ไม่สามารถบันทึกวิดีโอ')
 
-          if (!videoBlob) {
-            alert('ไม่สามารถบันทึกวิดีโอ')
-            return
-          }
+        const eventsBlob = new Blob(
+          [JSON.stringify(events)],
+          { type: 'application/json' }
+        )
 
-          // 2. upload video
-         const videoRes = await uploadMedia({
-            purpose: 'minicog_clock_video',
-            file: videoBlob,
-            sessionId: sessionId ?? '',
-          })
+        const [videoRes, imageRes, eventsRes] = await Promise.all([
+          uploadMedia({ purpose: 'minicog_clock_video', file: videoBlob, sessionId }),
+          uploadMedia({ purpose: 'minicog_clock_image', file: base64ToBlob(final_image), sessionId }),
+          uploadMedia({ purpose: 'minicog_clock_events', file: eventsBlob, sessionId }),
+        ])
 
-          if (videoRes.isErr()) {
-            alert('ไม่สามารถบันทึกวิดีโอได้')
-            return
-          }
+        if (videoRes.isErr() || imageRes.isErr() || eventsRes.isErr()) {
+          alert('อัปโหลดไม่สำเร็จ')
+          return
+        }
 
-          const imageRes = await uploadMedia({
-            purpose: 'minicog_clock_image',
-            file: base64ToBlob(final_image),
-            sessionId: sessionId ?? '',
-          })
+        await completeClockDrawing({
+          session_id: sessionId,
+          video_media_id: videoRes.value.media_id,
+          image_media_id: imageRes.value.media_id,
+          events_media_id: eventsRes.value.media_id,
+        })
 
-          if (imageRes.isErr()) {
-            alert('ไม่สามารถบันทึกรูปได้')
-            return
-          }
-
-          const eventsBlob = new Blob(
-            [JSON.stringify(events)],
-            { type: 'application/json' }
-          )
-
-          const eventsRes = await uploadMedia({
-            purpose: 'minicog_clock_events',
-            file: eventsBlob,
-            sessionId: sessionId ?? '',
-          })
-
-          if (eventsRes.isErr()) {
-            alert('ไม่สามารถบันทึก event ได้')
-            return
-          }
-
-          await completeClockDrawing({
-            session_id: sessionId,
-            video_media_id: videoRes.value.media_id,
-            image_media_id: imageRes.value.media_id,
-            events_media_id: eventsRes.value.media_id,
-          })
-
-          router.push('/minicog/word-recall')
-        }}
+        router.push('/minicog/word-recall')
+      }}
       />
     </AppShell>
   )

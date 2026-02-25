@@ -6,6 +6,9 @@ interface VoiceGuideContextValue {
   canReplay: boolean
   setCanReplay: (v: boolean) => void
   ready: boolean
+
+  enabled: boolean
+  setEnabled: (v: boolean) => void
 }
 
 const VoiceGuideContext =
@@ -18,14 +21,20 @@ export const VoiceGuideProvider = ({
 }) => {
   const [canReplay, setCanReplay] = useState(false)
   const [ready, setReady] = useState(false)
-
+  const [enabled, setEnabled] = useState(true)
   useEffect(() => {
-    setReady(true) 
+    setReady(true)
   }, [])
 
   return (
     <VoiceGuideContext.Provider
-      value={{ canReplay, setCanReplay, ready }}
+      value={{
+        canReplay,
+        setCanReplay,
+        ready,
+        enabled,
+        setEnabled,
+      }}
     >
       {children}
     </VoiceGuideContext.Provider>

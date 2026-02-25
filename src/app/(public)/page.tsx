@@ -12,11 +12,15 @@ import { useEffect } from 'react'
 export default function HomePage() {
   const router = useRouter()
   const setModalContent = useAssessmentStore((s) => s.setModalContent)
-  const { setCanReplay } = useVoiceGuideControl()
+
+  const { setEnabled } = useVoiceGuideControl()
 
   useEffect(() => {
-    setCanReplay(false)     
-    return () => setCanReplay(true)
+    setEnabled(false)
+
+    return () => {
+      setEnabled(true)
+    }
   }, [])
   
   return (

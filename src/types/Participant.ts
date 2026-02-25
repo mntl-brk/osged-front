@@ -13,6 +13,11 @@ export interface PatientDetail {
   volunteer_code: string;
   completed_at: string;
   demographics: DemographicsData;
+  consent?: {
+    given: boolean
+    video_url?: string
+    method?: string
+  }
   miniCog: {
     wordRegistration: string[];
     clockImage: string | null; // Base64
