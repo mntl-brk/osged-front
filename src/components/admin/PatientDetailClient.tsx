@@ -6,7 +6,7 @@ import { Gender } from '@/types'
 import { PatientDetail } from '@/types/Participant'
 import { AlertCircle, ArrowLeft, BarChart3, Brain, Calendar, CheckCircle, Clock, FileText, Mic, Smile, TrendingUp, User, Video, Activity, X, ChevronDown, CheckCircle2, Film, FileJson } from 'lucide-react'
 import { SecureImage } from '../SecureImage'
-import { SecureVideo } from '../SecureVideo'
+import { SecureMedia } from "../SecureMedia";
 import { SecureJson } from '../SecureJson'
 import { ScoreSelector } from '../ScoreSelector'
 import { mapEducationTH, mapGenderTH, mapLocationTH } from '@/utils/demographicMapper'
@@ -15,6 +15,7 @@ import { useTgds } from './useTgds'
 import { TGDS_QUESTIONS } from '@/data/tgdsQuestions'
 import { NewtonLoaderOverlay } from '../loading'
 import TGDSAnalyze from './TgdsAnalyze'
+import ConsentSection from './ConsentSection'
 
 interface Props {
   patient: PatientDetail
@@ -281,131 +282,13 @@ export default function PatientDetailClient({ patient }: Props) {
 
         {/* Vertical Scrollable Body */}
         <div className="p-8 overflow-y-auto space-y-10 bg-white">
-        {/* SECTION 3: Consent */}
-            <div className="space-y-6">
-                <button
-                    onClick={() => toggleSection('consent')}
-                    className="w-full flex items-center justify-between gap-4 border-l-8 border-purple-500 pl-6 pr-4 py-3 bg-purple-50/30 rounded-r-3xl hover:bg-purple-50 transition-all"
-                >
-                    <div className="flex items-center gap-4">
-                    <FileText size={32} className="text-purple-600"/>
-                    <div className="text-left">
-                        <h3 className="text-2xl font-black text-purple-900 leading-none">
-                        ข้อมูลความยินยอม (Consent)
-                        </h3>
-                        <p className="text-purple-500 font-bold text-sm mt-1 uppercase tracking-widest">
-                        Consent & Media Records
-                        </p>
-                    </div>
-                    </div>
-
-                    <ChevronDown
-                    className={`text-gray-400 transition-transform duration-300 ${
-                        openSections.consent ? 'rotate-180' : ''
-                    }`}
-                    size={28}
-                    />
-                </button>
-
-                {openSections.consent && (
-                    <div className="bg-white rounded-[35px] border-2 border-gray-100 p-8 shadow-sm animate-fade-in">
-
-                    {/* ===== STATUS ===== */}
-                    <div className="flex items-center justify-between mb-8">
-
-                        <div>
-                        <p className="text-xs font-bold text-purple-500 uppercase tracking-widest">
-                            Consent Status
-                        </p>
-                        <p className="text-3xl font-black text-gray-900 mt-2">
-                            {patient.consent?.given ? 'ให้ความยินยอมแล้ว' : 'ยังไม่ได้ให้ความยินยอม'}
-                        </p>
-                        </div>
-
-                        <span
-                        className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest border ${
-                            patient.consent?.given
-                            ? 'bg-green-50 text-green-600 border-green-200'
-                            : 'bg-red-50 text-red-600 border-red-200'
-                        }`}
-                        >
-                        {patient.consent?.given ? 'Granted' : 'Not Granted'}
-                        </span>
-                    </div>
-
-                    {/* ===== MEDIA FILES ===== */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-                        {/* Consent Video */}
-                        <div className="space-y-3">
-                        <p className="text-sm font-black text-gray-600 uppercase tracking-widest flex items-center gap-2">
-                            <Video size={16}/>
-                            Consent Video
-                        </p>
-
-                        <div className="aspect-video bg-black rounded-2xl overflow-hidden">
-                            {patient.consent?.video_url ? (
-                            <SecureVideo
-                                path={patient.consent.video_url}
-                                className="w-full h-full object-contain"
-                            />
-                            ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
-                                ไม่มีวิดีโอ
-                            </div>
-                            )}
-                        </div>
-                        </div>
-
-                        {/* AI Insights and Voice */}
-
-                        <div className="space-y-3">
-                        <p className="text-sm font-black text-gray-600 uppercase tracking-widest flex items-center gap-2">
-                          <BarChart3 size={24} className="text-orange-500"/> AI Mood Insights
-                        </p>
-
-                            <div className="space-y-6 flex flex-col justify-center">
-                                <div className="grid grid-cols-1 gap-4">
-                                    <div className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-orange-200 transition-all">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 bg-white rounded-xl shadow-sm group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors">
-                                                <Mic size={24}/>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black text-gray-900">Voice Sentiment</p>
-                                                <p className="text-xs text-gray-400 font-bold">โทนเสียงและการสั่นไหว</p>
-                                            </div>
-                                        </div>
-                                        <span className="text-lg font-black text-orange-600">Coming Soon</span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-orange-200 transition-all">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 bg-white rounded-xl shadow-sm group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
-                                                <Smile size={24}/>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black text-gray-900">Face Analysis</p>
-                                                <p className="text-xs text-gray-400 font-bold">การวิเคราะห์สีหน้า (Video)</p>
-                                            </div>
-                                        </div>
-                                        <span className="text-lg font-black text-blue-600">Coming Soon</span>
-                                    </div>
-                                </div>
-
-                                <button className="w-full bg-gray-900 text-white py-5 rounded-3xl font-black flex items-center justify-center gap-3 transition-all hover:bg-black shadow-xl active:scale-95">
-                                    <Video size={24} /> Coming Soon
-                                    {/* เล่นวิดีโอระหว่างประเมิน (TGDS Phase) */}
-                                </button>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    </div>
-                )}
-                </div>               
-   
+        {/* SECTION : Consent */}
+           <ConsentSection
+                patient={patient}
+                open={openSections.consent}
+                onToggle={() => toggleSection("consent")}
+                />        
+                
                     {/* SECTION 1: Cognition (Mini-Cog) */}
                     <div className="space-y-6">
                     <button
@@ -572,7 +455,7 @@ export default function PatientDetailClient({ patient }: Props) {
                                         <div className="px-6 pb-12">
                                         <div className="aspect-video bg-black rounded-2xl overflow-hidden">
                                             {patient.miniCog.clock_video_url ? (
-                                            <SecureVideo
+                                            <SecureMedia
                                                 path={patient.miniCog.clock_video_url}
                                                 className="w-full h-full object-contain"
                                             />

@@ -9,18 +9,20 @@ import {
 import { ALL_EMOTIONS, EMO_COLORS } from "@/interface/emotions";
 import { AnalyzeResponse, CardState, Segment } from "@/interface/video_emotions";
 import { normalizeEmotion } from "@/utils/emotion-utils";
-import { SecureVideo } from "../SecureVideo";
+import { SecureMedia } from "../SecureMedia";
 
 interface Props {
-  q: number;
-  questionText?: string;
-  answerScore?: number | null;
-  answerValue?: number | null; // 0/1 ดิบ
-  videoURL?: string | null;
-  st: CardState;
-  analyzeOne: (q: number) => Promise<void>;
-  download: (mime: string, filename: string, data: string | Blob) => void;
-  toCSV: (segments: Segment[]) => string;
+  q: number
+  questionText?: string
+  answerScore?: number | null
+  answerValue?: number | null
+  videoURL?: string | null
+  audioURL?: string | null
+  st: CardState
+  analyzeOne: (q: number) => Promise<void>
+  analyzeAudioOne: (q: number) => Promise<void>
+  download: (mime: string, filename: string, data: string | Blob) => void
+  toCSV: (segments: Segment[]) => string
 }
 
 export const EmotionQuestionCard: React.FC<Props> = ({
@@ -29,8 +31,10 @@ export const EmotionQuestionCard: React.FC<Props> = ({
   answerScore,
   answerValue,
   videoURL,
+  audioURL,
   st,
   analyzeOne,
+  analyzeAudioOne,
   download,
   toCSV,
 }) => {
@@ -71,36 +75,68 @@ export const EmotionQuestionCard: React.FC<Props> = ({
       <div className="flex flex-col gap-2">
         
         {/* Top row */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        
+        {/* ===== LEFT SIDE ===== */}
+        <div className="flex items-center gap-4 flex-wrap">
             <span className="inline-flex items-center rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">
-              ข้อ {q}
+            ข้อ {q}
             </span>
 
             {answerLabel && (
-              <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+            <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
                 คำตอบ: {answerLabel}
-              </span>
+            </span>
             )}
-          </div>
+        </div>
 
-          <button
+        {/* ===== RIGHT SIDE (BUTTON GROUP) ===== */}
+        <div className="flex gap-2 flex-wrap justify-end">
+            
+            {/* AUDIO BUTTON */}
+            <button
+            onClick={() => analyzeAudioOne(q)}
+            disabled={!audioURL || st.audioAnalyzing}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition"
+            >
+            {st.audioAnalyzing ? (
+                <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                กำลังวิเคราะห์...
+                </>
+            ) : (
+                <>
+                <Play className="h-4 w-4" />
+                วิเคราะห์เสียง
+                </>
+            )}
+            </button>
+
+            {/* VIDEO BUTTON */}
+            <button
             onClick={() => analyzeOne(q)}
             disabled={!videoURL || st.analyzing}
-            className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-xs font-medium text-white hover:bg-black disabled:opacity-50"
-          >
+            className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-4 py-2 text-xs font-medium text-white hover:bg-black disabled:opacity-50 transition"
+            >
             {st.analyzing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+                <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                กำลังวิเคราะห์...
+                </>
             ) : (
-              <Play className="h-4 w-4" />
+                <>
+                <Play className="h-4 w-4" />
+                วิเคราะห์สีหน้า
+                </>
             )}
-            {st.analyzing ? "กำลังวิเคราะห์..." : "วิเคราะห์อารมณ์"}
-          </button>
+            </button>
+
+        </div>
         </div>
 
         {/* Question */}
         {questionText && (
-          <div className="text-sm text-gray-700 font-medium leading-relaxed">
+          <div className="text-sm pt-2 text-gray-700 font-medium leading-relaxed">
             {questionText}
           </div>
         )}
@@ -115,7 +151,7 @@ export const EmotionQuestionCard: React.FC<Props> = ({
 
       <div className="rounded-xl bg-black/5 overflow-hidden">
         {videoURL ? (
-          <SecureVideo
+          <SecureMedia
             key={videoURL}
             path={videoURL}
             className="aspect-video w-full bg-black object-contain"
@@ -227,6 +263,66 @@ export const EmotionQuestionCard: React.FC<Props> = ({
         </div>
       </div>
     )}
+
+    {/* ===== AUDIO SECTION ===== */}
+    <div className="p-5 border-b border-gray-100">
+        <div className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">
+            เสียงคำตอบ
+        </div>
+
+        {audioURL ? (
+            <>
+            <SecureMedia
+                key={audioURL}
+                path={audioURL}
+                className="w-full rounded-lg"
+            >
+            </SecureMedia>
+            </>
+        ) : (
+            <div className="text-sm text-gray-500">
+            ไม่มีไฟล์เสียง
+            </div>
+        )}
+
+        {st.audioResult && (
+            <div className="mt-4 bg-white rounded-xl border border-gray-200 p-4">
+            <div className="text-sm font-semibold mb-2 text-gray-600">
+                ผลวิเคราะห์เสียง
+            </div>
+
+            <div
+                className={`text-lg font-black ${
+                st.audioResult.prediction === 1
+                    ? "text-red-600"
+                    : "text-green-600"
+                }`}
+            >
+                {st.audioResult.message}
+            </div>
+
+            <div className="text-xs text-gray-500 mt-1">
+                ความยาวเสียง {st.audioResult.duration.toFixed(1)} วินาที
+            </div>
+
+        <div className="mt-3 flex justify-end">
+            <button
+            onClick={() =>
+                download(
+                "application/json",
+                `tgds_audio_q${String(q).padStart(2, "0")}.json`,
+                JSON.stringify(st.audioResult, null, 2)
+                )
+            }
+            className="rounded-xl bg-white px-4 py-2 text-xs ring-1 ring-gray-200 hover:bg-gray-100 text-gray-800"
+            >
+            <Download className="h-4 w-4 inline mr-1" />
+            ดาวน์โหลดผลเสียง
+            </button>
+        </div>
+        </div>
+    )}
+    </div>
   </div>
   );
 };
