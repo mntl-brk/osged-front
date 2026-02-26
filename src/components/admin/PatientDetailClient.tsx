@@ -14,6 +14,7 @@ import { TgdsDetail } from '@/types/tgds'
 import { useTgds } from './useTgds'
 import { TGDS_QUESTIONS } from '@/data/tgdsQuestions'
 import { NewtonLoaderOverlay } from '../loading'
+import TGDSAnalyze from './TgdsAnalyze'
 
 interface Props {
   patient: PatientDetail
@@ -645,208 +646,15 @@ export default function PatientDetailClient({ patient }: Props) {
                     </div>
 
                     {/* SECTION 2: Mood (TGDS) */}
-
-                    <div className="space-y-6">
-                     <button
-                        onClick={() => toggleSection('tgds')}
-                        className="w-full flex items-center justify-between gap-4 border-l-8 border-orange-500 pl-6 pr-4 py-3 bg-orange-50/30 rounded-r-3xl hover:bg-orange-50 transition-all"
-                        >
-                        <div className="flex items-center gap-4">
-                            <Activity size={32} className="text-orange-600"/>
-                            <div className="text-left">
-                            <h3 className="text-2xl font-black text-orange-900 leading-none">
-                                ผลการประเมินอารมณ์ (TGDS-15)
-                            </h3>
-                            <p className="text-orange-500 font-bold text-sm mt-1 uppercase tracking-widest">
-                                Emotional Assessment Details
-                            </p>
-                            </div>
-                        </div>
-
-                        <ChevronDown
-                            className={`text-gray-400 hover:text-gray-900 transition-transform duration-300 ${
-                            openSections.tgds ? 'rotate-180' : ''
-                            }`}
-                            size={28}
-                        />
-                        </button>
-
-                   
-
-                    {openSections.tgds && (
-                    <>
-                    {!hasCompleteTGDS ? (
-                        <div className="bg-white rounded-3xl border border-gray-100 p-10 text-center text-gray-400 font-bold shadow-sm">
-                        ยังไม่มีข้อมูล TGDS
-                        </div>
-                    ) : (
-                        <div className="space-y-10 animate-fade-in">
-                        <div className="bg-white rounded-[35px] border-2 border-gray-100 p-8 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-10">
-                            {/* Score Display */}
-                            <div className="flex flex-col items-center justify-center text-center p-6 bg-orange-50/20 rounded-[40px] border border-orange-100">
-                                <div className="relative mb-6">
-                                    <svg className="w-56 h-56 transform -rotate-90">
-                                        <circle className="text-white" strokeWidth="14" stroke="currentColor" fill="transparent" r="95" cx="112" cy="112" />
-                                        <circle
-                                            className="text-orange-500"
-                                            strokeWidth="14"
-                                            strokeDasharray={596}
-                                            strokeDashoffset={596 - (596 * patient.tgds.score) / 15}
-                                            strokeLinecap="round"
-                                            stroke="currentColor"
-                                            fill="transparent"
-                                            r="95"
-                                            cx="112"
-                                            cy="112"
-                                        />
-                                    </svg>
-                                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                                        <span className="text-7xl font-black text-orange-600 leading-none">{patient.tgds.score}</span>
-                                        <span className="block text-xs font-black text-orange-400 uppercase tracking-[0.2em] mt-2">Points</span>
-                                    </div>
-                                </div>
-                                <div className="w-full bg-white p-6 rounded-3xl shadow-sm border border-orange-50">
-                                    <p className={`text-2xl font-black ${patient.tgds.score >= 11 ? 'text-red-600' : patient.tgds.score >= 6 ? 'text-orange-500' : 'text-green-600'}`}>
-                                        {patient.tgds.score >= 11 ? 'ภาวะซึมเศร้าเด่นชัด' : 
-                                         patient.tgds.score >= 6 ? 'เสี่ยงต่อภาวะซึมเศร้า' : 'อารมณ์ปกติ'}
-                                    </p>
-                                    <p className="text-gray-400 font-bold text-xs uppercase mt-1 tracking-widest">Geriatric Depression Scale Status</p>
-                                </div>
-                            </div>
-
-                            {/* AI Insights and Voice */}
-                            <div className="space-y-6 flex flex-col justify-center">
-                                <h4 className="text-xl font-black text-gray-800 flex items-center gap-2 mb-2">
-                                    <BarChart3 size={24} className="text-orange-500"/> AI Mood Insights
-                                </h4>
-                                
-                                <div className="grid grid-cols-1 gap-4">
-                                    <div className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-orange-200 transition-all">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 bg-white rounded-xl shadow-sm group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors">
-                                                <Mic size={24}/>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black text-gray-900">Voice Sentiment</p>
-                                                <p className="text-xs text-gray-400 font-bold">โทนเสียงและการสั่นไหว</p>
-                                            </div>
-                                        </div>
-                                        <span className="text-lg font-black text-orange-600">Coming Soon</span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-orange-200 transition-all">
-                                        <div className="flex items-center gap-4">
-                                            <div className="p-3 bg-white rounded-xl shadow-sm group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
-                                                <Smile size={24}/>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-black text-gray-900">Face Analysis</p>
-                                                <p className="text-xs text-gray-400 font-bold">การวิเคราะห์สีหน้า (Video)</p>
-                                            </div>
-                                        </div>
-                                        <span className="text-lg font-black text-blue-600">Coming Soon</span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </div>
-                    <div className="space-y-8 mt-10">
-                    <h4 className="text-xl font-black text-orange-900 flex items-center gap-2">
-                        <Activity size={22} className="text-orange-500" />
-                        รายละเอียดคำตอบรายข้อ (TGDS-15)
-                    </h4>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-3 gap-6">
                 
-                    {!tgds.answers || tgds.answers.length === 0 ? (
-                      <div className="col-span-full text-center text-gray-400 font-bold py-10">
-                        ยังไม่มีข้อมูล TGDS
-                    </div>
-                    ) :
-                    tgds.answers.map((item) => {
-                    const question = TGDS_QUESTIONS.find(
-                        (q) => q.id === item.question_no
-                    )
-
-                    if (!question) return null
-
-                    const isYes = item.answer === 1
-
-                    //  คำนวณคะแนนตาม scoreTarget
-                    const isScored =
-                        (isYes && question.scoreTarget === true) ||
-                        (!isYes && question.scoreTarget === false)
-
-                    return (
-                        <div
-                        key={item.question_no}
-                        className="bg-white rounded-[30px] border-2 border-orange-100 shadow-sm hover:shadow-md hover:border-orange-200 transition-all overflow-hidden flex flex-col"
-                        >
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-5 py-4 bg-orange-50/40 border-b border-orange-100">
-                            <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-orange-500 text-white flex items-center justify-center font-black text-sm">
-                                {item.question_no}
-                            </div>
-                            <span className="text-sm font-black text-orange-900">
-                                Q{item.question_no}
-                            </span>
-                            </div>
-
-                            {/* 🔥 แสดงผลตาม calculate */}
-                            <span
-                            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                                isScored
-                                ? 'bg-red-50 text-red-600 border-red-200'
-                                : 'bg-green-50 text-green-600 border-green-200'
-                            }`}
-                            >
-                            {isScored ? '+1' : '0'}
-                            </span>
-                        </div>
-
-                        {/* Question Text */}
-                        <div className="px-5 py-4 text-sm font-semibold text-gray-700 border-b border-gray-100">
-                            {question.text}
-                        </div>
-
-                        {/* Video */}
-                        <div className="aspect-video bg-black">
-                            {item.video_url ? (
-                            <SecureVideo
-                                path={item.video_url}
-                                className="w-full h-full object-contain"
-                            />
-                            ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs font-bold">
-                                ไม่มีวิดีโอ
-                            </div>
-                            )}
-                        </div>
-
-                        {/* Footer */}
-                        <div className="p-4 mt-auto">
-                            <button
-                            disabled
-                            className="w-full bg-gray-200 text-gray-500 py-2 rounded-2xl font-black text-xs flex items-center justify-center gap-2 cursor-not-allowed"
-                            >
-                            <BarChart3 size={16} />
-                            วิเคราะห์ AI (เร็ว ๆ นี้)
-                            </button>
-                        </div>
-                        </div>
-                    )
-                    })}
-                    </div>
-                    </div>
-
-
-                     </div>
-                    )}
-                     </>
-                 )}
-                </div>
-                
+                    <TGDSAnalyze
+                    tgds={tgds}
+                    patient={patient}
+                    hasCompleteTGDS={hasCompleteTGDS}
+                    open={openSections.tgds}
+                    onToggle={() => toggleSection('tgds')}
+                    />     
+                                  
                 </div>
                 
 
