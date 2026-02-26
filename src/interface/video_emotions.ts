@@ -28,11 +28,19 @@ export type AnalyzeResponse = {
   per_sec: Array<{ t: number } & Record<string, number>>;
 };
 
+export interface AudioAnalyzeResult {
+  prediction: number
+  message: string
+  duration: number
+}
 
 export type CardState = {
   loadingVideo: boolean;
-  videoURL: string | null;  
+  videoURL: string | null;
+  audioURL?: string | null;
   analyzing: boolean;
+  audioAnalyzing?: boolean;
   error: string | null;
   result: AnalyzeResponse | null;
+  audioResult?: AudioAnalyzeResult | null,
 };

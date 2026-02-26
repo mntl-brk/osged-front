@@ -10,7 +10,7 @@ export async function GET(
   const filePath = path.join('/')
 
   const backendRes = await fetch(
-    `${process.env.BACKEND_API_URL}/doctor/video/${filePath}`,
+    `${process.env.BACKEND_API_URL}/doctor/video_audio/${filePath}`,
     {
       headers: {
         'CF-Access-Client-Id': process.env.CF_ACCESS_CLIENT_ID!,

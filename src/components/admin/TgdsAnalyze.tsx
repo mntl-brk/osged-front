@@ -2,11 +2,11 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { Activity, ChevronDown, BarChart3, Mic, Smile, Video, Loader2 } from 'lucide-react'
-import { SecureVideo } from '../SecureVideo'
 import { TGDS_QUESTIONS } from '@/data/tgdsQuestions'
 import { EmotionQuestionCard } from './EmotionQuestionCard'
 import { AnalyzeResponse, CardState, Segment } from '@/interface/video_emotions'
 import { makeEmptyDurations, normalizeEmotion } from '@/utils/emotion-utils'
+import { useAggregateMood } from '@/hooks/useAggregateMood'
 
 interface Props {
   tgds: any
@@ -20,9 +20,13 @@ function emptyCard(): CardState {
   return {
     loadingVideo: false,
     videoURL: null,
+    audioURL: null,
     analyzing: false,
+    audioAnalyzing: false,
     error: null,
     result: null,
+    audioResult: null,
+
   }
 }
 
@@ -36,19 +40,15 @@ export default function TGDSAnalyze({
 
 const totalQuestions = tgds?.answers?.length ?? 0
 const [analyzingAll, setAnalyzingAll] = useState(false);
-
-const [overallEmotion, setOverallEmotion] = useState<{
-  positive: number
-  negative: number
-  neutral: number
-  dominant: string
-} | null>(null)
+const [analyzingAudioAll, setAnalyzingAudioAll] = useState(false);
 
 const [cards, setCards] = React.useState<Record<number, CardState>>(
   Object.fromEntries(
     (tgds?.answers ?? []).map((a: any) => [a.question_no, emptyCard()])
   )
 )
+
+const { videoMood, audioMood } = useAggregateMood(cards)
 
 
  useEffect(() => {
@@ -61,7 +61,8 @@ const [cards, setCards] = React.useState<Record<number, CardState>>(
         if (a.video_url) {
             next[a.question_no] = {
             ...next[a.question_no],
-            videoURL: a.video_url,
+            videoURL: a.video_url ?? null,
+            audioURL: a.audio_url ?? null,
             }
         }
         })
@@ -152,49 +153,65 @@ const analyzeAll = async () => {
 
     await Promise.all(qs.map((q: number) => analyzeOne(q)))
 
-    setTimeout(() => {
-      computeOverallEmotion()
-    }, 0)
-
   } finally {
     setAnalyzingAll(false)
   }
 }
 
-const computeOverallEmotion = () => {
-  const totalByEmotion = makeEmptyDurations()
+// audio
 
-  Object.values(cards).forEach(st => {
-    st.result?.segments?.forEach(s => {
-      const dur = s.end - s.start
-      const emo = normalizeEmotion(s.emotion)
-      totalByEmotion[emo] += dur
+const analyzeAudioOne = async (q: number) => {
+  setCards(prev => ({
+    ...prev,
+    [q]: { ...prev[q], audioAnalyzing: true, error: null }
+  }))
+
+
+  try {
+    const audioPath = cards[q]?.audioURL
+    if (!audioPath) throw new Error("ไม่พบไฟล์เสียง")
+
+    const res = await fetch("/api/analyze_audio", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        path: audioPath
+      })
     })
-  })
 
-  const positive = totalByEmotion.Happy
-  const negative =
-    totalByEmotion.Sad +
-    totalByEmotion.Angry +
-    totalByEmotion.Fear 
-  const neutral = totalByEmotion.Neutral
+    const data = await res.json()
 
-  const total = positive + negative + neutral
-  if (total === 0) return
+    setCards(prev => ({
+      ...prev,
+      [q]: { ...prev[q], audioAnalyzing: false, audioResult: data }
+    }))
 
-  const result = {
-    positive: positive / total,
-    negative: negative / total,
-    neutral: neutral / total,
-    dominant:
-      negative > positive
-        ? "negative"
-        : positive > negative
-        ? "positive"
-        : "neutral"
+  } catch (e: any) {
+    setCards(prev => ({
+      ...prev,
+      [q]: { ...prev[q], audioAnalyzing: false, error: e.message }
+    }))
   }
+}
 
-  setOverallEmotion(result)
+
+const analyzeAllAudio = async () => {
+  if (!tgds?.answers || analyzingAudioAll) return
+
+  setAnalyzingAudioAll(true)
+
+  try {
+    const qs = tgds.answers
+      .filter((a: any) => !!cards[a.question_no]?.audioURL)
+      .map((a: any) => a.question_no)
+
+    await Promise.all(qs.map((q: number) => analyzeAudioOne(q)))
+
+  } finally {
+    setAnalyzingAudioAll(false)
+  }
 }
 
   return (
@@ -302,7 +319,7 @@ const computeOverallEmotion = () => {
                   <div className="grid grid-cols-1 gap-4">
                     <div className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-orange-200 transition-all">
                       <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white rounded-xl shadow-sm group-hover:bg-orange-50 group-hover:text-orange-500 transition-colors">
+                        <div className="p-3 rounded-xl shadow-sm bg-orange-50 text-orange-500 transition-colors">
                           <Mic size={24} />
                         </div>
                         <div>
@@ -314,14 +331,41 @@ const computeOverallEmotion = () => {
                           </p>
                         </div>
                       </div>
-                      <span className="text-lg font-black text-orange-600">
-                        Coming Soon
-                      </span>
+                     <div className="text-right">
+                    {audioMood ? (
+                        <>
+                        <p
+                            className={`text-lg font-black ${
+                            audioMood.dominant === "negative"
+                                ? "text-red-600"
+                                : audioMood.dominant === "positive"
+                                ? "text-green-600"
+                                : "text-gray-600"
+                            }`}
+                        >
+                            {audioMood.dominant === "negative"
+                            ? "แนวโน้มเสียงเชิงลบ"
+                            : audioMood.dominant === "positive"
+                            ? "แนวโน้มเสียงเชิงบวก"
+                            : "เสียงเป็นกลาง"}
+                        </p>
+
+                        <p className="text-xs text-gray-500 font-bold mt-1">
+                            Positive {(audioMood.positive * 100).toFixed(0)}% ·
+                            Negative {(audioMood.negative * 100).toFixed(0)}%
+                        </p>
+                        </>
+                    ) : (
+                        <span className="text-lg font-black text-orange-600">
+                        ยังไม่วิเคราะห์
+                        </span>
+                    )}
+                    </div>
                     </div>
 
                     <div className="flex items-center justify-between p-5 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-orange-200 transition-all">
                       <div className="flex items-center gap-4">
-                        <div className="p-3 bg-white rounded-xl shadow-sm group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                        <div className="p-3 rounded-xl shadow-sm bg-blue-50 text-blue-500 transition-colors">
                           <Smile size={24} />
                         </div>
                         <div>
@@ -334,27 +378,27 @@ const computeOverallEmotion = () => {
                         </div>
                       </div>
                      <div className="text-right">
-                        {overallEmotion ? (
+                        {videoMood ? (
                             <>
                             <p
                                 className={`text-lg font-black ${
-                                overallEmotion.dominant === "negative"
+                                videoMood.dominant === "negative"
                                     ? "text-red-600"
-                                    : overallEmotion.dominant === "positive"
+                                    : videoMood.dominant === "positive"
                                     ? "text-green-600"
                                     : "text-gray-600"
                                 }`}
                             >
-                                {overallEmotion.dominant === "negative"
+                                {videoMood.dominant === "negative"
                                 ? "แนวโน้มอารมณ์เชิงลบ"
-                                : overallEmotion.dominant === "positive"
+                                : videoMood.dominant === "positive"
                                 ? "แนวโน้มอารมณ์เชิงบวก"
-                                : "อารมณ์ค่อนข้างเป็นกลาง"}
+                                : "อารมณ์เป็นกลาง"}
                             </p>
 
                             <p className="text-xs text-gray-500 font-bold mt-1">
-                                Positive {(overallEmotion.positive * 100).toFixed(0)}% ·
-                                Negative {(overallEmotion.negative * 100).toFixed(0)}%
+                                Positive {(videoMood.positive * 100).toFixed(0)}% ·
+                                Negative {(videoMood.negative * 100).toFixed(0)}%
                             </p>
                             </>
                         ) : (
@@ -366,15 +410,38 @@ const computeOverallEmotion = () => {
                     </div>
 
                   </div>
-                  <button
-                    onClick={analyzeAll}
-                    disabled={analyzingAll}
-                    className="w-full bg-gray-900 text-white py-5 rounded-3xl font-black flex items-center justify-center gap-3 transition-all hover:bg-black shadow-xl active:scale-95 disabled:opacity-50"
+                 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+
+                    {/* AUDIO */}
+                    <button
+                        onClick={analyzeAllAudio}
+                        disabled={analyzingAudioAll}
+                        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-5 rounded-3xl font-black flex items-center justify-center gap-3 transition-all hover:bg-orange-600 shadow-xl active:scale-95 disabled:opacity-50"
                     >
-                    
-                    {analyzingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video size={24} />}
-                    {analyzingAll ? "กำลังวิเคราะห์..." : "วิเคราะห์อารมณ์ทั้งหมด"}
+                        {analyzingAudioAll ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                        <Mic size={24} />
+                        )}
+                        {analyzingAudioAll ? "กำลังวิเคราะห์..." : "วิเคราะห์เสียงทั้งหมด"}
                     </button>
+
+                    {/* VIDEO */}
+                    <button
+                        onClick={analyzeAll}
+                        disabled={analyzingAll}
+                        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white py-5 rounded-3xl font-black flex items-center justify-center gap-3 transition-all hover:bg-blue-600 shadow-xl active:scale-95 disabled:opacity-50"
+                    >
+                        {analyzingAll ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                        <Video size={24} />
+                        )}
+                        {analyzingAll ? "กำลังวิเคราะห์..." : "วิเคราะห์วิดีโอทั้งหมด"}
+                    </button>
+
+                    </div>
                 </div>
               </div>
 
@@ -408,8 +475,10 @@ const computeOverallEmotion = () => {
                             answerValue={item.answer}
                             answerScore={item.answer}
                             videoURL={item.video_url}
+                            audioURL={item.audio_url}
                             st={cards[item.question_no]}
                             analyzeOne={analyzeOne}
+                            analyzeAudioOne={analyzeAudioOne}
                             download={(mime, filename, data) => {
                                 const blob =
                                 data instanceof Blob ? data : new Blob([data], { type: mime })

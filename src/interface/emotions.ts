@@ -23,3 +23,5 @@ export interface BarRow extends EmotionDurations {
   question: string;
   _total: number;
 }
+
+

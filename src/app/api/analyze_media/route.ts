@@ -3,7 +3,7 @@ export async function POST(req: Request) {
     const backend = process.env.BACKEND_API_URL!;
     const body = await req.json();
 
-    const resp = await fetch(`${backend}/emotions_video/analyze`, {
+    const resp = await fetch(`${backend}/emotions_media/analyze`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -13,16 +13,28 @@ export async function POST(req: Request) {
       body: JSON.stringify(body),
     });
 
-    const contentType = resp.headers.get("content-type") || "application/json";
-    const text = await resp.text();
+    const data = await resp.json().catch(() => null);
 
-    return new Response(text, {
-      status: resp.status,
-      headers: { "content-type": contentType },
+    if (!resp.ok) {
+      return new Response(
+        JSON.stringify({
+          error: data?.detail || "Backend error",
+        }),
+        {
+          status: resp.status,
+          headers: { "content-type": "application/json" },
+        }
+      );
+    }
+
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { "content-type": "application/json" },
     });
 
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Proxy failed";
+
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: {
