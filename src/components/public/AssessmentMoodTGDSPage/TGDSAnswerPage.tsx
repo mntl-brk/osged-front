@@ -264,14 +264,18 @@ const uploadTGDSSound = useCallback(
     setIsSubmitting(true)
 
     try {
-      const videoMediaId = await stopRecordingAndUpload()
+
+      const videoPromise = stopRecordingAndUpload()
       const audioBlob = await stopAudio()
 
-      let audioMediaId: string | undefined
+      const audioPromise = audioBlob
+        ? uploadTGDSSound(audioBlob)
+        : Promise.resolve(undefined)
 
-      if (audioBlob) {
-        audioMediaId = await uploadTGDSSound(audioBlob)
-      }
+      const [videoMediaId, audioMediaId] = await Promise.all([
+        videoPromise,
+        audioPromise,
+      ])
 
       await onAnswer(finalAnswer, videoMediaId, audioMediaId)
 

@@ -84,7 +84,7 @@ export function useTGDSRecordingUpload({
     const recorder = mimeType
       ? new MediaRecorder(stream, {
           mimeType,
-          videoBitsPerSecond: 800_000,
+          videoBitsPerSecond: 1500000,
         })
       : new MediaRecorder(stream)
 

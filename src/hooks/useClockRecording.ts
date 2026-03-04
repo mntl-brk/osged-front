@@ -28,26 +28,35 @@ export function useClockRecording(enabled: boolean) {
         })
 
         if (!mounted) return
-
         streamRef.current = stream
 
         // ===== MIME SAFE CHECK =====
-        let mimeType = 'video/webm;codecs=vp8'
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-          mimeType = 'video/mp4'
+        const mimeTypes = [
+          'video/webm;codecs=vp8,opus',
+          'video/webm;codecs=vp8',
+          'video/webm'
+        ]
+
+        const supported = mimeTypes.find(t =>
+          MediaRecorder.isTypeSupported(t)
+        )
+
+        if (!supported) {
+          console.error('No supported recording format')
+          return
         }
 
-        mimeTypeRef.current = mimeType
+        mimeTypeRef.current = supported
 
         const recorder = new MediaRecorder(stream, {
-          mimeType,
-          videoBitsPerSecond: 800_000, // ลดขนาดไฟล์
+          mimeType: supported,
+          videoBitsPerSecond: 1500000,
         })
 
         chunksRef.current = []
 
         recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) {
+          if (e.data && e.data.size > 0) {
             chunksRef.current.push(e.data)
           }
         }
@@ -66,7 +75,9 @@ export function useClockRecording(enabled: boolean) {
       mounted = false
 
       try {
-        recorderRef.current?.stop()
+        if (recorderRef.current?.state !== 'inactive') {
+          recorderRef.current?.stop()
+        }
       } catch {}
 
       streamRef.current?.getTracks().forEach(t => t.stop())
@@ -84,7 +95,8 @@ export function useClockRecording(enabled: boolean) {
           type: mimeTypeRef.current,
         })
 
-        // 🔥 หยุดกล้องชัวร์อีกครั้ง
+        chunksRef.current = []
+
         streamRef.current?.getTracks().forEach(t => t.stop())
         streamRef.current = null
 

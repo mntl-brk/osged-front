@@ -85,7 +85,7 @@ export const useCameraRecorder = () => {
 
     const recorder = new MediaRecorder(streamRef.current, {
       mimeType,
-      videoBitsPerSecond: 800_000, // ลดจาก 1Mbps
+      videoBitsPerSecond: 1500000, 
     })
 
     
