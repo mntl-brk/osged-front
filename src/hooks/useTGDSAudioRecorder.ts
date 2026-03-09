@@ -5,6 +5,7 @@ interface Options {
 }
 
 export function useTGDSAudioRecorder({ enabled = true }: Options = {}) {
+
   const recorderRef = useRef<MediaRecorder | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -31,38 +32,47 @@ export function useTGDSAudioRecorder({ enabled = true }: Options = {}) {
     return ''
   }
 
+  /* ================= INIT MIC ================= */
+
+  const initStream = async () => {
+    if (streamRef.current) return streamRef.current
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        channelCount: 1,
+      },
+    })
+
+    streamRef.current = stream
+    return stream
+  }
+
   /* ================= START ================= */
 
   const start = useCallback(async () => {
+
     if (!enabled) return
     if (isRecording) return
 
     try {
+
       setError(null)
       chunksRef.current = []
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          channelCount: 1,
-        },
-      })
-
-      streamRef.current = stream
+      const stream = await initStream()
 
       const mimeType = getSupportedMimeType()
 
-      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {})
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream)
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
           chunksRef.current.push(e.data)
         }
-      }
-
-      recorder.onerror = () => {
-        setError('recording_error')
       }
 
       recorder.start()
@@ -74,47 +84,52 @@ export function useTGDSAudioRecorder({ enabled = true }: Options = {}) {
       console.error(err)
       setError('permission_denied')
     }
+
   }, [enabled, isRecording])
 
   /* ================= STOP ================= */
 
   const stop = useCallback(async (): Promise<Blob | null> => {
+
     const recorder = recorderRef.current
+
     if (!recorder || recorder.state === 'inactive') {
       return null
     }
 
     const blob = await new Promise<Blob>((resolve) => {
+
       recorder.onstop = () => {
+
         const finalBlob = new Blob(chunksRef.current, {
           type: recorder.mimeType || 'audio/webm',
         })
+
         resolve(finalBlob)
       }
 
       recorder.stop()
     })
 
-    // cleanup stream
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    streamRef.current = null
     recorderRef.current = null
     setIsRecording(false)
 
     return blob
+
   }, [])
 
   /* ================= FORCE STOP ================= */
 
   const forceStop = useCallback(() => {
-    if (recorderRef.current && recorderRef.current.state !== 'inactive') {
-      recorderRef.current.stop()
-    }
+
+    recorderRef.current?.stop()
 
     streamRef.current?.getTracks().forEach((t) => t.stop())
     streamRef.current = null
     recorderRef.current = null
+
     setIsRecording(false)
+
   }, [])
 
   return {

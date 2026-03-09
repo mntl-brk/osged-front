@@ -10,6 +10,7 @@ import { BaseTGDSLayout } from './BaseTGDSLayout'
 import { useTGDSRecordingUpload } from '@/hooks/useTGDSRecordingUpload'
 import { uploadMedia } from '@/api/media/uploadMedia'
 import { useTGDSAudioRecorder } from '@/hooks/useTGDSAudioRecorder'
+import { useTGDSAutoSkipTimer } from '@/hooks/useTGDSAutoSkipTimer'
 
 interface Props {
   question: string
@@ -17,7 +18,7 @@ interface Props {
   total: number
   progressPercent: number
   sessionId: string
-  onAnswer: (answer: boolean, videoMediaId?: string, audioMediaId?: string) => void
+  onAnswer: (answer: boolean | 'skip' , videoMediaId?: string, audioMediaId?: string) => void
   isSpeaking: boolean
 }
 
@@ -35,7 +36,7 @@ export const TGDSAnswerPage: React.FC<Props> = ({
   const [isListening, setIsListening] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [hasDetectedAnswer, setHasDetectedAnswer] = useState(false)
-  const [finalAnswer, setFinalAnswer] = useState<boolean | null>(null)
+  const [finalAnswer, setFinalAnswer] = useState<boolean | 'skip' | null>(null)
   const accumulatedTranscriptRef = useRef('')
   const hasSpokenQuestionRef = useRef(false)
   /* ================= REFS ================= */
@@ -44,6 +45,19 @@ export const TGDSAnswerPage: React.FC<Props> = ({
   const listeningIntentRef = useRef(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   /* ================= Upload Helper ================= */
+
+const { showHint, onUserActivity } = useTGDSAutoSkipTimer({
+  isAiSpeaking: isSpeaking,
+  isListening,
+  isSubmitting,
+  onSkip: () => {
+      onAnswer('skip')
+  },
+})
+
+useEffect(() => {
+  onUserActivity()
+}, [question])
 
  const uploadTGDSVideo = useCallback(
     async (blob: Blob): Promise<string> => {
@@ -87,10 +101,10 @@ const uploadTGDSSound = useCallback(
 
   const {
     stopAndUpload: stopRecordingAndUpload,
-    restartRecording,
+    startRecording,
+    destroyCamera,
     isUploading,
   } = useTGDSRecordingUpload({
-    enabled: isRecording,
     uploadFn: uploadTGDSVideo,
   })
 
@@ -111,6 +125,14 @@ const uploadTGDSSound = useCallback(
     }
   }, [question])
 
+  useEffect(() => {
+
+    return () => {
+      destroyCamera()
+    }
+
+  }, [destroyCamera])
+
   
   /* ================= RESET STATE WHEN QUESTION CHANGES ================= */
 
@@ -122,31 +144,36 @@ const uploadTGDSSound = useCallback(
   const processTranscriptForAnswer = (fullTranscript: string) => {
     if (!fullTranscript) return null
 
-    // 1. ทำความสะอาดข้อความและตัดคำสร้อย (เพิ่มคำที่ผู้สูงอายุมักใช้)
     let cleaned = fullTranscript
       .toLowerCase()
       .replace(/\s+/g, '')
       .replace(/[.,!?]/g, '')
       .replace(/ครับ|ค่ะ|จ้ะ|จ้า|นะ|เลย|แหละ|หรอก|ลูก|หลาน/g, '')
 
-    // 2. ถ้าผู้สูงอายุอ่านคำถามด้วย (มีคำว่า 'หรือไม่') ให้ตัดข้อความข้างหน้าทิ้ง เอาเฉพาะสิ่งที่พูดหลัง 'หรือไม่'
     if (cleaned.includes('หรือไม่')) {
       const parts = cleaned.split('หรือไม่')
-      cleaned = parts[parts.length - 1] // เอาส่วนสุดท้ายหลัง 'หรือไม่'
+      cleaned = parts[parts.length - 1]
     }
 
-    // ถ้าพูดแค่คำถามแล้วหยุด 'cleaned' จะกลายเป็น string ว่างเปล่า
     if (!cleaned) return null
 
-    // 3. เช็คคำปฏิเสธ (Negative) -> ต้องเช็คก่อน!
-    // ครอบคลุม: ไม่ใช่, ไม่มี, ไม่จริง, ไม่เป็น, ไม่ได้, เปล่า
-    const negativeRegex = /ไม่(ใช่|มี|จริง|เป็น|ได้|ค่อย)|เปล่า/
+    /* ===== skip detection ===== */
+
+    const skipRegex = /ข้าม|ไม่ตอบ|ผ่าน|ขอข้าม|ไม่อยากตอบ/
+    if (skipRegex.test(cleaned)) {
+      return 'skip'
+    }
+
+    /* ===== negative ===== */
+    if (cleaned === 'ไม่') return false
+
+    const negativeRegex = /ไม่(ใช่|มี|จริง|เป็น|ได้|ค่อย)|เปล่า|ไม่มี/
     if (negativeRegex.test(cleaned)) {
       return false
     }
 
-    // 4. เช็คคำตอบรับ (Positive)
-    // ครอบคลุม: ใช่, มี, จริง, เป็น, ถูก, ลด (สำหรับข้อลดกิจกรรม)
+    /* ===== positive ===== */
+
     const positiveRegex = /ใช่|มี|จริง|เป็น|ถูก|ลด/
     if (positiveRegex.test(cleaned)) {
       return true
@@ -156,25 +183,6 @@ const uploadTGDSSound = useCallback(
   }
   
   /* ================= SPEECH RECOGNITION ================= */
-  const detectAnswer = (text: string) => {
-    if (!text) return null
-
-    const cleaned = text
-      .toLowerCase()
-      .replace(/\s+/g, '')
-      .replace(/[.,!?]/g, '')
-      .replace(/ครับ|ค่ะ|นะ|จ้า|เลย|แหละ/g, '')
-
-    // ถ้าจบด้วย "หรือไม่" แสดงว่ายังอ่านคำถามอยู่
-    if (cleaned.endsWith('หรือไม่')) {
-      return null
-    }
-
-    if (cleaned.endsWith('ไม่ใช่')) return false
-    if (cleaned.endsWith('ใช่')) return true
-
-    return null
-  }
 
   const createRecognition = () => {
     const SR =
@@ -190,6 +198,8 @@ const uploadTGDSSound = useCallback(
     rec.onresult = (e: any) => {
       const result = e.results[e.results.length - 1]
       const transcript = result[0].transcript.trim()
+      
+      onUserActivity()
 
       accumulatedTranscriptRef.current += ' ' + transcript
       const fullTranscript = accumulatedTranscriptRef.current
@@ -198,11 +208,23 @@ const uploadTGDSSound = useCallback(
       const detected = processTranscriptForAnswer(fullTranscript)
 
       if (detected !== null) {
+
         listeningIntentRef.current = false
-        setFinalAnswer(detected)
-        setHasDetectedAnswer(true)
         setIsListening(false)
         rec.stop()
+
+        if (detected === 'skip') {
+
+          setHasDetectedAnswer(true)
+          setFinalAnswer('skip')
+
+
+        } else {
+
+          setFinalAnswer(detected)
+          setHasDetectedAnswer(true)
+
+        }
       }
     }
 
@@ -220,6 +242,8 @@ const uploadTGDSSound = useCallback(
   /* ================= ACTIONS ================= */
 
   const toggleListening = async () => {
+    onUserActivity()
+
     if (isListening) {
       listeningIntentRef.current = false
       recognitionRef.current?.stop()
@@ -252,7 +276,7 @@ const uploadTGDSSound = useCallback(
 
     // Hard reset video recording
     setIsRecording(false)
-    await restartRecording()
+    await startRecording()
     setIsRecording(true)
   }
 
@@ -300,6 +324,8 @@ const uploadTGDSSound = useCallback(
           ? 'ใช่'
           : finalAnswer === false
           ? 'ไม่ใช่'
+          : finalAnswer === 'skip'
+          ? 'ข้ามคำถามนี้'
           : undefined
       }
       hasDetectedAnswer={hasDetectedAnswer}
@@ -309,6 +335,7 @@ const uploadTGDSSound = useCallback(
       isUploading={isUploading}
       isSubmitting={isSubmitting}
       isSpeaking={isSpeaking}
+      showHint={showHint}
     />
   )
 }

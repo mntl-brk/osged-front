@@ -1,7 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, StopCircle, Send, RotateCcw } from 'lucide-react';
-import { WordSet } from '@/types';
-import { useVoiceGuide } from '@/hooks/useVoiceGuide';
+import { Mic, StopCircle } from 'lucide-react';
 import { SpeechSegment, useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
 
@@ -12,22 +10,24 @@ interface AssessmentWordRecallPageProps {
 export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> = ({
   onNext,
 }) => {
-  const recognitionRef = useRef<any>(null);
-  const transcriptBufferRef = useRef('');
-  const hasSpokenGuideRef = useRef(false);
-  const [isEvaluating, setIsEvaluating] = useState(false);
 
-  const [hasSpoken, setHasSpoken] = useState(false);
-  /* ================= AI GUIDE ================= */
-  // const { status, isSpeaking, replay } = useVoiceGuide(
-  //     `ต่อไปนะครับ ขอให้พูดคำทั้งสามคำที่จำไว้ก่อนหน้านี้
-  //       พูดต่อเนื่องกันได้เลย ไม่ต้องรีบนะครับ
-  //       เมื่อพร้อมแล้ว กดปุ่มไมค์สีแดงเพื่อเริ่มพูดครับ`,
-  // )
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   const { isSpeaking } = useLocalVoiceGuide('/audio/minicog_recall.mp3')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showHint, setShowHint] = useState(false)
 
+  const startTimeRef = useRef<number | null>(null)
+  const autoSubmittedRef = useRef(false)
+
+  useEffect(() => {
+    if (isSpeaking) return
+
+    if (!startTimeRef.current) {
+      startTimeRef.current = Date.now()
+    }
+
+  }, [isSpeaking])
 
 
   /* ================= Speech Recognition ================= */
@@ -67,6 +67,38 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
     recognizedWords[2] || '',
   ];
   
+  useEffect(() => {
+  const interval = setInterval(() => {
+
+    if (!startTimeRef.current) return
+    if (isSpeaking || isListening) return
+    if (autoSubmittedRef.current) return
+
+    const elapsed = Date.now() - startTimeRef.current
+
+    if (elapsed > 30000 && !showHint) {
+      setShowHint(true)
+    }
+
+    if (elapsed > 120000) {
+      autoSubmittedRef.current = true
+      handleSubmit()
+    }
+
+  }, 1000)
+
+  return () => clearInterval(interval)
+
+  }, [isSpeaking, isListening, showHint])
+
+  useEffect(() => {
+    if (!transcript) return
+
+    startTimeRef.current = Date.now()
+    setShowHint(false)
+
+  }, [transcript])
+
 
   /* ================= UI ================= */
   return (
@@ -75,6 +107,21 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
       <h1 className="text-3xl md:text-5xl font-bold text-center mb-8 text-gray-900 mt-12">
         พูดคำทั้ง 3 คำที่ขอให้จำก่อนหน้านี้
       </h1>
+      {showHint && (
+        <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 text-center animate-fade-in mb-6">
+
+          <p className="text-gray-700 text-lg">
+            💡 หากนึกคำตอบไม่ออก สามารถพูดว่า
+            <strong> "นึกไม่ออก"</strong>
+            แล้วกดส่งคำตอบได้เลย
+          </p>
+
+          <p className="text-base text-gray-500 mt-2">
+            ระบบจะข้ามคำถามให้อัตโนมัติภายใน 2 นาที
+          </p>
+
+        </div>
+      )}
 
 
       {/* ================= Interaction Panel ================= */}

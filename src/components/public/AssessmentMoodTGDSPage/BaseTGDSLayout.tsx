@@ -29,6 +29,7 @@ interface BaseTGDSLayoutProps {
   isUploading?: boolean
   isSubmitting?: boolean
   isSpeaking: boolean
+  showHint?: boolean
 }
 
 export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
@@ -44,9 +45,10 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
   onSubmitAnswer,
   isUploading = false,
   isSubmitting,
-  isSpeaking
+  isSpeaking,
+  showHint
 }) => {
-  const hasFinalAnswer = Boolean(finalAnswerText);
+  const hasFinalAnswer = hasDetectedAnswer;
 
   return (
     <div className="w-full max-w-2xl mx-auto px-6 py-8 animate-fade-in flex flex-col min-h-[85vh]">
@@ -71,6 +73,19 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
           />
         </div>
       </div>
+
+      {showHint && (
+        <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 text-center mb-6">
+          <p className="text-gray-700 text-lg">
+            หากยังไม่พร้อมตอบ สามารถพูดว่า
+            <strong> "ขอข้ามคำถามนี้"</strong>
+          </p>
+
+          <p className="text-sm text-gray-500 mt-2">
+            ระบบจะข้ามคำถามนี้ให้อัตโนมัติภายใน 2 นาที
+          </p>
+        </div>
+      )}
 
       {/* ================= Question ================= */}
       <div className="flex-grow flex flex-col justify-center mb-10 md:mb-2 mt-6">
@@ -100,14 +115,23 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
       </div>
 
       {/* ================= Answer / Listening Display ================= */}
-      <div className="mb-8">
+      <div className="mb-8 mt-4">
         {/* มีคำตอบแล้ว */}
         {hasFinalAnswer && (
-          <div className="p-6 rounded-[32px] md:h-[140px] h-[100px] border-4 bg-white border-green-300 shadow-inner text-center flex flex-col items-center justify-center animate-fade-in">
+          <div className={`p-6 rounded-[32px] md:h-[140px] h-[100px] border-4 bg-white  shadow-inner text-center flex flex-col items-center justify-center animate-fade-in
+            ${finalAnswerText === 'ข้ามคำถามนี้'
+                ? 'border-yellow-300'
+                : 'border-green-300'
+              }
+              `}>
             <span className="text-sm md:text-base font-bold text-gray-500 uppercase tracking-widest mb-4">
               คำตอบของท่าน
             </span>
-            <p className="text-4xl md:text-5xl font-black text-green-700">
+            <p className={`text-4xl md:text-5xl font-black
+              ${finalAnswerText === 'ข้ามคำถามนี้'
+                ? 'text-yellow-600'
+                : 'text-green-700'
+              }`}>
               {finalAnswerText}
             </p>
           </div>

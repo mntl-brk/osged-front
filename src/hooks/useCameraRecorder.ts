@@ -24,8 +24,8 @@ export const useCameraRecorder = () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 640, max: 640 },
-          height: { ideal: 480, max: 480 },
+          width: { ideal: 480, max: 480 },
+          height: { ideal: 360, max: 360 },
           frameRate: { ideal: 24, max: 30 },
           facingMode: 'user',
         },
@@ -85,7 +85,7 @@ export const useCameraRecorder = () => {
 
     const recorder = new MediaRecorder(streamRef.current, {
       mimeType,
-      videoBitsPerSecond: 1500000, 
+      videoBitsPerSecond: 800000, 
     })
 
     

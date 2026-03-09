@@ -7,7 +7,7 @@ import { ClockDemoOverlay } from '../ClockDemoOverlay';
 import { ClockDrawingResult, ClockEvent } from '@/types/clockEvents';
 import { toPng } from 'html-to-image';
 import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
-
+import { flushSync } from 'react-dom'
 interface AssessmentClockDrawingPageProps {
   onNext: (result: ClockDrawingResult) => void
 }
@@ -99,7 +99,7 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
 
     return await toPng(containerRef.current, {
       backgroundColor: '#ffffff',
-      pixelRatio: 2,
+      pixelRatio: 1,
     })
   }
 
@@ -397,17 +397,20 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
   };
 
   const handleSubmit = async () => {
-  if (isSpeaking || isSubmitting) return
+    if (isSpeaking || isSubmitting) return
 
-  setIsSubmitting(true)
+    flushSync(() => {
+      setIsSubmitting(true)
+    })
 
-  await new Promise(requestAnimationFrame)
-  await new Promise(resolve => setTimeout(resolve, 50))
+    await new Promise(requestAnimationFrame)
+
   try {
     const finalImage = await captureClockArea()
+
     const finishedAt = Date.now()
 
-    onNext({
+    await onNext({
       final_image: finalImage,
       events: eventsRef.current,
       meta: {
@@ -416,10 +419,11 @@ export const AssessmentClockDrawingPage: React.FC<AssessmentClockDrawingPageProp
         duration_ms: finishedAt - startedAtRef.current,
       },
     })
+
   } finally {
     setIsSubmitting(false)
   }
-}
+  }
 
   return (
     <>

@@ -98,6 +98,32 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
       }
     }
       
+    const handleAutoSkip = async () => {
+
+      if (isEvaluating) return
+      await evaluateAnswer()
+    }
+
+
+    const [showHint, setShowHint] = useState(false)
+
+    const startTimeRef = useRef<number>(Date.now())
+    const autoSkippedRef = useRef(false)
+
+    useEffect(() => {
+      if (!transcript) return
+
+      startTimeRef.current = Date.now()
+      setShowHint(false)
+
+    }, [transcript])
+
+
+    const resetSilenceTimer = () => {
+      startTimeRef.current = Date.now()
+      autoSkippedRef.current = false
+      setShowHint(false)
+    }
 
     const replayingRef = useRef(false)
 
@@ -121,6 +147,9 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
 
           setHasPlayedAudio(true)
           setAutoReplay(false)
+
+          resetSilenceTimer()
+          
         } finally {
           replayingRef.current = false
         }
@@ -137,7 +166,16 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     hasSpokenMicGuide.current = false;
     hasSpokenCompletion.current = false;
     micGuideStartedRef.current = false
+
+    resetSilenceTimer() 
   }, [wordSet]);
+
+  useEffect(() => {
+    if (completed) return
+
+    resetSilenceTimer()
+
+  }, [attempt])
 
   useEffect(() => {
   return () => {
@@ -171,6 +209,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
       allowReplay: false,
       onEnd: () => {
         setHasPlayedMicGuide(true)
+        resetSilenceTimer()
       },
     }
   )
@@ -300,6 +339,40 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     isAiSpeaking ||
     isListening;
 
+  
+  //timeout ผู้ใช้ไม่ตอบ
+    
+  useEffect(() => {
+    const interval = setInterval(() => {
+
+      if (!hasPlayedMicGuide) return
+      if (completed) return
+      if (isAiSpeaking || isListening) return
+
+      const elapsed = Date.now() - startTimeRef.current
+
+      if (elapsed > 30000 && !showHint) {
+        setShowHint(true)
+      }
+
+      if (elapsed > 120000 && !autoSkippedRef.current) {
+        autoSkippedRef.current = true
+        handleAutoSkip()
+      }
+
+    }, 1000)
+
+    return () => clearInterval(interval)
+
+  }, [isAiSpeaking, isListening, completed, hasPlayedMicGuide])
+
+  useEffect(() => {
+    if (!completed) return
+
+    setShowHint(false)
+
+  }, [completed])
+
 
   return (
     <div className="w-full max-w-4xl mx-auto px-6 py-8 animate-fade-in flex flex-col items-center pb-32">
@@ -315,35 +388,19 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
       </div>
     )}
 
-    {/* รอบที่ 2 */}
-    {attempt === 2 && !completed && (
-      <div className="mx-auto mb-6 px-4">
-        <div className="
-          bg-orange-50 border-2 border-orange-200
-          text-orange-600
-          rounded-2xl px-5 py-4
-          text-center font-semibold
-          text-base sm:text-lg lg:text-2xl
-        ">
-          😊 ไม่เป็นไรนะครับ <br className="sm:hidden" />
-          ลองฟังและพูดอีกครั้งได้เลยครับ
-        </div>
-      </div>
-    )}
+    {showHint && (
+      <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-4 text-center animate-fade-in mb-6">
 
-    {/* รอบสุดท้าย */}
-    {attempt === 3 && !completed && (
-      <div className="mx-auto mb-8 px-4">
-        <div className="
-          bg-red-50 border-2 border-red-300
-          text-red-600
-          rounded-2xl px-5 py-4
-          text-center font-bold
-          text-base sm:text-lg lg:text-2xl
-        ">
-          ⚠️ รอบสุดท้ายแล้วครับ <br className="sm:hidden" />
-          ลองทำอีกครั้งอย่างเต็มที่นะครับ
-        </div>
+        <p className="text-gray-700 mt- text-lg">
+          💡 หากนึกคำตอบไม่ออก สามารถพูดว่า
+          <strong> "นึกไม่ออก"</strong>
+          แล้วกดส่งคำตอบได้เลย
+        </p>
+
+        <p className="text-base text-gray-500 mt-2">
+          ระบบจะข้ามคำถามให้อัตโนมัติภายใน 2 นาที
+        </p>
+
       </div>
     )}
 
@@ -381,33 +438,6 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
                     </p>
                 </div>
 
-                {/* <div className="flex flex-col gap-4 w-full max-w-xs">
-                  <button
-                      onClick={onReroll}
-                      disabled={isPlaying || isSpeaking}
-                      className={`
-                        flex items-center justify-center gap-2 py-2 px-4 rounded-xl text-sm transition-all
-                        ${
-                          isPlaying || isSpeaking
-                            ? 'text-gray-300 border-gray-200 cursor-not-allowed'
-                            : 'text-gray-500 hover:text-primary border-gray-200 hover:bg-white'
-                        }
-                      `}
-                  >
-                      <RefreshCcw size={16} />
-                      <span>สุ่มคำใหม่</span>
-                  </button>
-                  
-                  <button
-                      onClick={skipAudio}
-                      disabled={isPlaying || isSpeaking}
-
-                      className="flex items-center justify-center gap-2 text-gray-400 hover:text-gray-600 underline text-sm"
-                  >
-                      <VolumeX size={16} />
-                      <span>ไม่ได้ยินเสียง? ข้ามไปพูดเลย</span>
-                  </button>
-                </div> */}
             </div>
         ) : null}
 
@@ -532,7 +562,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
         </div>
       )}
 
-       {completed && completeStatus === 'attempted' && (
+       {completed && (
           <div className="mt-42 flex flex-col items-center gap-6 animate-fade-in">
 
             <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center">
@@ -540,11 +570,11 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
             </div>
 
             <p className="text-2xl font-bold text-blue-600 text-center">
-              ทำครบตามขั้นตอนแล้วครับ
+              อย่าลืมจำคำเหล่านี้ไว้
             </p>
 
             <p className="text-xl text-gray-600 text-center max-w-md">
-              ขอบคุณที่ตั้งใจทำแบบทดสอบนะครับ อย่าลืมจำคำเหล่านี้ไว้
+              อย่าลืมจำคำเหล่านี้ไว้นะครับ เดี๋ยวผมจะกลับมาถามใหม่อีกครั้ง
             </p>
 
            <button
@@ -577,42 +607,6 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
           </div>
         )}
 
-        {completed && completeStatus === 'correct' && (
-          <div className="mt-42 flex flex-col items-center gap-6 animate-fade-in">
-            <CheckCircle size={96} className="text-green-500" />
-
-            <p className="text-3xl font-bold text-green-600">
-              เยี่ยมมากครับ 🎉
-            </p>
-
-            <p className="text-xl text-gray-600 text-center">
-              คุณจำคำได้ถูกต้องครบทั้งสามคำ อย่าลืมจำคำเหล่านี้ไว้
-            </p>
-
-           <button
-              onClick={() => {
-                if (isBlocked) return
-                stopAudio()
-                onNext()
-              }}
-              disabled={isBlocked}
-              className={`
-                mt-4 w-full max-w-sm h-20 rounded-3xl text-2xl font-black
-                flex items-center justify-center gap-4
-                transition-all
-                ${
-                  isBlocked
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-primary hover:bg-primaryHover text-white'
-                }
-              `}
-            >
-              {isSpeaking ? 'กำลังอธิบาย...' : 'ไปข้อถัดไป'}
-              <ArrowRight size={44} strokeWidth={4} />
-            </button>
-          </div>
-        )}
-
 
       </div>
     </div>
@@ -631,4 +625,3 @@ const ListeningWave = () => (
     ))}
   </div>
 );
-

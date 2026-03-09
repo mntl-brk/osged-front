@@ -15,8 +15,8 @@ export function useClockRecording(enabled: boolean) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: 640, max: 640 },
-            height: { ideal: 480, max: 480 },
+            width: { ideal: 480, max: 480 },
+            height: { ideal: 360, max: 360 },
             frameRate: { ideal: 24, max: 30 },
             facingMode: 'user',
           },
@@ -50,7 +50,7 @@ export function useClockRecording(enabled: boolean) {
 
         const recorder = new MediaRecorder(stream, {
           mimeType: supported,
-          videoBitsPerSecond: 1500000,
+          videoBitsPerSecond: 800000,
         })
 
         chunksRef.current = []
@@ -61,7 +61,7 @@ export function useClockRecording(enabled: boolean) {
           }
         }
 
-        recorder.start()
+        recorder.start(2000)
         recorderRef.current = recorder
 
       } catch (err) {
