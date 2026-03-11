@@ -5,7 +5,7 @@ import { verifyParticipantCode } from '@/api/participant/verifyParticipant';
 import { sleep } from '@/hooks/useSleepPage';
 
 interface VerificationPageProps {
-  onSubmit: (code: string) => void;
+  onSubmit: (code: string, withIn: boolean) => void;
 }
 
 export const VerificationPage: React.FC<VerificationPageProps> = ({ onSubmit }) => {
@@ -22,7 +22,7 @@ export const VerificationPage: React.FC<VerificationPageProps> = ({ onSubmit }) 
 
       result.match(
         (participant) => {
-          onSubmit(participant.id);
+          onSubmit(participant.id, participant.within_two_months);
         },
         () => {
           alert('ไม่พบรหัสผู้เข้าร่วม กรุณาตรวจสอบรหัสอีกครั้ง');

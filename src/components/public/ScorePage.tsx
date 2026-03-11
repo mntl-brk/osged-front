@@ -101,7 +101,7 @@ export const ScorePage: React.FC<ScorePageProps> = ({
       {/* 4. Action Buttons */}
       <div className="flex flex-col gap-6">
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
             <button 
                 onClick={onHome}
                 className="h-24 bg-white border-4 border-gray-200 text-gray-600 text-3xl font-black rounded-[30px] shadow-lg hover:bg-gray-50 flex items-center justify-center gap-4 transition-all active:scale-95"
@@ -110,17 +110,10 @@ export const ScorePage: React.FC<ScorePageProps> = ({
                 กลับหน้าแรก
             </button>
 
-            <button 
-                onClick={() => alert("ระบบจัดเก็บข้อมูลสรุปไว้ในระบบของแพทย์เรียบร้อยแล้ว")}
-                className="h-24 bg-gray-900 text-white text-3xl font-black rounded-[30px] shadow-xl hover:bg-black flex items-center justify-center gap-4 transition-all active:scale-95"
-            >
-                <FileText size={32} />
-                ดูสรุปข้อมูล
-            </button>
         </div>
 
         {/* Emergency Call - Conditional */}
-        {(isHighRiskMood || isHighRiskCog) && (
+        {/* {(isHighRiskMood || isHighRiskCog) && (
             <a 
                 href="tel:1323"
                 className="w-full h-24 bg-red-600 text-white text-3xl font-black rounded-[30px] shadow-xl flex items-center justify-center gap-4 hover:bg-red-700 transition-all animate-pulse"
@@ -128,7 +121,7 @@ export const ScorePage: React.FC<ScorePageProps> = ({
                 <Phone size={36} fill="white" />
                 สายด่วนสุขภาพจิต 
             </a>
-        )}
+        )} */}
       </div>
 
       {/* 5. Bottom Disclaimer */}

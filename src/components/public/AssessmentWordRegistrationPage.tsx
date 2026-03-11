@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Volume2, ArrowRight, RefreshCcw, Mic, StopCircle, CheckCircle, XCircle, Send, RotateCcw, VolumeX, Loader } from 'lucide-react';
 import { WordSet } from '@/types';
 import { playAudioUrl, playSequential, stopAudio, subscribeSpeaking } from '@/lib/audioManager';
-import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { useRealtimeSpeech } from '@/hooks/useRealtimeSpeech'
 import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
 import { submitWordRegistration } from '@/api/minicog/submitWordRegistration';
 import { useAssessmentStore } from '@/store/assessmentStore';
@@ -67,16 +67,12 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
 
   // Initialize Speech Recognition
     const {
-      isListening,
       transcript,
-      words: recognizedWords,
-      start,
-      stop,
-      reset,
-    } = useSpeechRecognition({
-      lang: 'th-TH',
-      maxWords: 3,
-    });
+      isListening,
+      startListening,
+      stopListening,
+      resetTranscript
+    } = useRealtimeSpeech()
 
     const speakWords = async () => {
       if (hasPlayedAudio || isPlaying) return
@@ -162,17 +158,20 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     setHasPlayedAudio(false);
     setCompleted(false);
     setAttempt(1);
-    reset();
+
+    resetTranscript()
+
     hasSpokenMicGuide.current = false;
     hasSpokenCompletion.current = false;
     micGuideStartedRef.current = false
 
     resetSilenceTimer() 
+    
   }, [wordSet]);
 
   useEffect(() => {
     if (completed) return
-
+    resetTranscript()
     resetSilenceTimer()
 
   }, [attempt])
@@ -321,10 +320,9 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
         // ผิดรอบแรก → auto replay
         if (result.attempt === 2) {
           setAutoReplay(true)
-          setHasPlayedAudio(true)
+          setHasPlayedAudio(true)  
         }
-
-        reset()
+        resetTranscript()
       }
 
     } catch (err) {
@@ -506,15 +504,18 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
              onClick={() => {
                 if (isAiSpeaking || isEvaluating) return;
                 if (isListening) {
-                    setIsEvaluating(true);
-                    stop();
+                  setIsEvaluating(true)
 
-                    setTimeout(() => {
-                      evaluateAnswer();
-                    }, 500);
+                  stopListening()
 
-                  } else {
-                  start();
+                  setTimeout(() => {
+                    evaluateAnswer()
+                  }, 500)
+
+                } else {
+                  resetTranscript()
+                  startListening()
+
                 }
               }}
             disabled={isAiSpeaking || isEvaluating}

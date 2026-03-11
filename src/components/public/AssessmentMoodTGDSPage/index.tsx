@@ -12,7 +12,7 @@ interface Props {
 
 export const AssessmentMoodTGDSPage: React.FC<Props> = ({ onComplete }) => {
   const [currentIdx, setCurrentIdx] = useState(0)
-  const [answers, setAnswers] = useState<boolean[]>([])
+  const [answers, setAnswers] = useState<(boolean | 'skip')[]>([])
   const sessionId = useAssessmentStore((s) => s.sessionId)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingState, setIsLoadingState] = useState(true)
@@ -72,7 +72,7 @@ export const AssessmentMoodTGDSPage: React.FC<Props> = ({ onComplete }) => {
   if (currentIdx >= TGDS_QUESTIONS.length) return null
 
   const handleAnswer = async (
-  answer: boolean,
+  answer: boolean | 'skip',
   videoMediaId?: string,
   audioMediaId?: string
 ) => {

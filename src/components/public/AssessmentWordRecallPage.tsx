@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic, StopCircle } from 'lucide-react';
-import { SpeechSegment, useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { useRealtimeSpeech } from '@/hooks/useRealtimeSpeech'
+import { SpeechSegment } from '@/hooks/useSpeechRecognition'
 import { useLocalVoiceGuide } from '@/hooks/useLocalVoiceGuide';
 
 interface AssessmentWordRecallPageProps {
@@ -32,17 +33,17 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
 
   /* ================= Speech Recognition ================= */
   const {
-    isListening,
     transcript,
-    words: recognizedWords,
-    segments,
-    start,
-    stop,
-    reset,
-  } = useSpeechRecognition({
-    lang: 'th-TH',
-    maxWords: 3,
-  });
+    isListening,
+    startListening,
+    stopListening,
+    resetTranscript
+  } = useRealtimeSpeech()
+
+  const recognizedWords = transcript
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 3)
 
   const normalize = (text: string) =>
     text
@@ -55,7 +56,14 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
 
     setIsSubmitting(true)
 
-    if (isListening) stop()
+    if (isListening) stopListening()
+
+    const segments: SpeechSegment[] = [
+      {
+        text: transcript,
+        confidence: 1
+      }
+    ]
 
     onNext(transcript, segments)
 
@@ -198,12 +206,13 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
                 onClick={() => {
                   if (isListening) {
                     setIsEvaluating(true)
-                    stop()
+                    stopListening()
+
                     setTimeout(handleSubmit, 500)
     
                   } else {
-                    reset();     
-                    start();    
+                   startListening()
+                   resetTranscript()
                   }
                 }}
                 disabled={isSpeaking || isSubmitting}

@@ -6,6 +6,7 @@ export interface Participant {
   code: string      // ก001
   status: 'unused' | 'used' | 'deleted'
   created_at?: string
+  within_two_months: boolean
 }
 
 export interface PatientDetail {

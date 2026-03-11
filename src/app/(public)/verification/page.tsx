@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 export default function VerificationRoute() {
   const router = useRouter()
   const setParticipantId = useAssessmentStore((s) => s.setParticipantId)
+  const setWithInTest = useAssessmentStore((s) => s.setWithInTest)
 
   // const [showChromeWarning, setShowChromeWarning] = useState(false)
 
@@ -44,9 +45,11 @@ export default function VerificationRoute() {
 
       <AppShell>
         <VerificationPage
-          onSubmit={(code) => {
+          onSubmit={(code, withIn) => {
             // if (showChromeWarning) return
             setParticipantId(code)
+            setWithInTest(withIn)
+            
             router.push('/consent')
           }}
         />

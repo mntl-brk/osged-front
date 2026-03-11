@@ -16,7 +16,9 @@ export default function WordRegistrationRoute() {
   const sessionId = useAssessmentStore((s) => s.sessionId)
 
   const currentWordSet = useAssessmentStore((s) => s.currentWordSet)
+  const withIn = useAssessmentStore((s) => s.withIn_test)
   const setCurrentWordSet = useAssessmentStore((s) => s.setCurrentWordSet)
+  
   const startedRef = useRef(false)
   
   const [isMiniCogReady, setIsMiniCogReady] = useState(false)
@@ -35,8 +37,16 @@ export default function WordRegistrationRoute() {
         return
       }
 
+      if (withIn === undefined){
+        alert("not have withIn")
+        router.replace('/')
+        return
+      }
+
+
+      console.log(withIn)
       if (!currentWordSet) {
-        const wordSet = getWordSetByEducation(demographics.educationLevel)
+        const wordSet = getWordSetByEducation(demographics.educationLevel, withIn!)
         setCurrentWordSet(wordSet)
         return
       }
@@ -62,7 +72,7 @@ export default function WordRegistrationRoute() {
         )
       }
     })()
-  }, [hasHydrated, demographics, sessionId, currentWordSet, router, setCurrentWordSet])
+  }, [hasHydrated, demographics, sessionId, currentWordSet, withIn, router, setCurrentWordSet])
 
   if (!currentWordSet) return null
 
@@ -71,7 +81,7 @@ export default function WordRegistrationRoute() {
       <AssessmentWordRegistrationPage
         wordSet={currentWordSet}
         onReroll={() => {
-          const newSet = getWordSetByEducation(demographics!.educationLevel)
+          const newSet = getWordSetByEducation(demographics!.educationLevel, withIn!)
           setCurrentWordSet(newSet)
         }}
         onNext={() => router.push('/minicog/clock-drawing')}

@@ -15,8 +15,11 @@ type State = {
   sessionId: string | null
 
   currentWordSet: WordSet | null
+  withIn_test: boolean | null
+
   recallScore: number | null
   moodScore: number | null
+
 
   setHasHydrated: (v: boolean) => void
   setModalContent: (v: string | null) => void
@@ -26,6 +29,7 @@ type State = {
   setSessionId: (id: string) => void
   setParticipantId: (v: string) => void
   setCurrentWordSet: (v: WordSet | null) => void
+  setWithInTest: (v: boolean | null) => void
   setRecallScore: (v: number | null) => void
   setMoodScore: (v: number | null) => void
   resetAll: () => void
@@ -45,6 +49,7 @@ export const useAssessmentStore = create<State>()(
       sessionId: null,
 
       currentWordSet: null,
+      withIn_test: null,
       recallScore: null,
       moodScore: null,
 
@@ -56,6 +61,7 @@ export const useAssessmentStore = create<State>()(
       setParticipantId: (v) => set({ participantId: v }),
       setSessionId: (id) => set({ sessionId: id }),
       setCurrentWordSet: (v) => set({ currentWordSet: v }),
+      setWithInTest: (v) => set({ withIn_test: v }),
       setRecallScore: (v) => set({ recallScore: v }),
       setMoodScore: (v) => set({ moodScore: v }),
       
@@ -66,6 +72,7 @@ export const useAssessmentStore = create<State>()(
           participantId: '',
           sessionId: null,
           currentWordSet: null,
+          withIn_test: null,
           recallScore: null,
           moodScore: null,
         }),

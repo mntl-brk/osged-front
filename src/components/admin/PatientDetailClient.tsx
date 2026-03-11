@@ -27,8 +27,8 @@ export default function PatientDetailClient({ patient }: Props) {
     const [formattedDate, setFormattedDate] = useState('')
     const { data: tgds, isLoading, error } = useTgds(patient.id)
     const [openSection, setOpenSection] = useState<'video' | 'json' | null>(null)
-    const [clockScore, setClockScore] = useState<0 | 1 | 2 | null>(
-        patient.miniCog.clockScore as 0 | 1 | 2 | null
+    const [clockScore, setClockScore] = useState<0 | 2 | null>(
+        patient.miniCog.clockScore as 0 | 2 | null
     )
     const tgdsAnswers = tgds?.answers ?? []
     const hasCompleteTGDS = tgdsAnswers.length === 15   
@@ -73,7 +73,7 @@ export default function PatientDetailClient({ patient }: Props) {
     patient.miniCog?.score ?? 0
     )
 
-    const handleClockScore = async (score: 0 | 1 | 2) => {
+    const handleClockScore = async (score: 0 | 2) => {
     try {
         setClockScore(score)
 
@@ -96,7 +96,7 @@ export default function PatientDetailClient({ patient }: Props) {
 
     } catch (err) {
         alert('ไม่สามารถบันทึกคะแนนได้')
-        setClockScore(patient.miniCog.clockScore as 0 | 1 | 2 | null)
+        setClockScore(patient.miniCog.clockScore as 0 | 2 | null)
     }
     }
 

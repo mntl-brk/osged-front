@@ -18,9 +18,9 @@ export default function PublicLayout({
   return (
     <VoiceGuideProvider>
       <GlobalSpeakingIndicator />
-      <SessionGuard>
+      {/* <SessionGuard> */}
         {children}
-      </SessionGuard>
+      {/* </SessionGuard> */}
     </VoiceGuideProvider>
   )
 }

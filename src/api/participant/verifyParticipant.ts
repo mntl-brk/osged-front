@@ -1,5 +1,5 @@
 import { get } from '@/services/httpRequest'
-import { object, string } from 'valibot'
+import { boolean, object, string } from 'valibot'
 import { apiAction } from '../apiAction'
 import { Participant } from '@/types/Participant'
 
@@ -10,7 +10,7 @@ export const VerifyParticipantRequestSchema = object({
 
 export const VerifyParticipantResponseSchema = object({
   id: string(),
-
+  within_two_months: boolean(),
 })
 
 export const verifyParticipantCode = async (payload: { code: string }) => {

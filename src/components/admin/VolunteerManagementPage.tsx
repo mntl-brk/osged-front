@@ -37,6 +37,7 @@ useEffect(() => {
             code: p.code,
             status: p.status,
             created_at: p.created_at,
+            within_two_months: p.within_two_months
           }))
         )
       },
@@ -61,6 +62,7 @@ useEffect(() => {
           code: p.code,
           status: p.status,
           created_at: p.created_at,
+          within_two_months: p.within_two_months
         }
 
         setCodes((prev) => [newCode, ...prev])

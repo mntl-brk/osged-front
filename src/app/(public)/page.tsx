@@ -11,18 +11,22 @@ import { useEffect } from 'react'
 
 export default function HomePage() {
   const router = useRouter()
+
+  const resetAll = useAssessmentStore((s) => s.resetAll)
   const setModalContent = useAssessmentStore((s) => s.setModalContent)
 
   const { setEnabled } = useVoiceGuideControl()
 
   useEffect(() => {
+    resetAll() 
+
     setEnabled(false)
 
     return () => {
       setEnabled(true)
     }
   }, [])
-  
+
   return (
     <AppShell>
       <Hero

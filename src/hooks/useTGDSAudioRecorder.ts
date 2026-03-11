@@ -19,8 +19,9 @@ export function useTGDSAudioRecorder({ enabled = true }: Options = {}) {
     const types = [
       'audio/webm;codecs=opus',
       'audio/webm',
+      'audio/mp4;codecs=mp4a',
       'audio/mp4',
-      'audio/mpeg',
+      'audio/aac'
     ]
 
     for (const type of types) {
@@ -65,6 +66,10 @@ export function useTGDSAudioRecorder({ enabled = true }: Options = {}) {
 
       const mimeType = getSupportedMimeType()
 
+      if (!mimeType) {
+        console.warn("No supported audio mime type")
+      }
+
       const recorder = mimeType
         ? new MediaRecorder(stream, { mimeType })
         : new MediaRecorder(stream)
@@ -89,34 +94,37 @@ export function useTGDSAudioRecorder({ enabled = true }: Options = {}) {
 
   /* ================= STOP ================= */
 
-  const stop = useCallback(async (): Promise<Blob | null> => {
+ const stop = useCallback(async (): Promise<Blob | null> => {
+  const recorder = recorderRef.current
 
-    const recorder = recorderRef.current
+  if (!recorder || recorder.state === 'inactive') {
+    return null
+  }
 
-    if (!recorder || recorder.state === 'inactive') {
-      return null
+  return new Promise((resolve) => {
+    recorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, {
+        type: recorder.mimeType || 'audio/webm',
+      })
+
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      streamRef.current = null
+      recorderRef.current = null
+      setIsRecording(false)
+
+      resolve(blob)
     }
 
-    const blob = await new Promise<Blob>((resolve) => {
+    // บังคับให้เบราว์เซอร์ส่งข้อมูลที่บันทึกค้างไว้เข้า ondataavailable ทันที
+    try {
+      recorder.requestData()
+    } catch (e) {
+      // ดักเผื่อในกรณีที่เบราว์เซอร์บางตัวไม่รองรับ requestData()
+    }
 
-      recorder.onstop = () => {
-
-        const finalBlob = new Blob(chunksRef.current, {
-          type: recorder.mimeType || 'audio/webm',
-        })
-
-        resolve(finalBlob)
-      }
-
-      recorder.stop()
-    })
-
-    recorderRef.current = null
-    setIsRecording(false)
-
-    return blob
-
-  }, [])
+    recorder.stop()
+  })
+}, [])
 
   /* ================= FORCE STOP ================= */
 

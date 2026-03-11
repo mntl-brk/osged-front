@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, ArrowRight, StopCircle, Send, CheckCircle2, MessageSquareQuote, RotateCcw } from 'lucide-react';
 import { TGDS_QUESTIONS } from '@/data/tgdsQuestions';
-import { speakSequentialWithPreload } from '@/lib/speakSequentialWithPreload';
-import { isAudioUnlocked } from '@/lib/audioUnlock';
-import { stopAudio } from '@/lib/audioManager';
-import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 interface AssessmentMoodTGDSPageProps {
   onComplete: (score: number) => void;
 }

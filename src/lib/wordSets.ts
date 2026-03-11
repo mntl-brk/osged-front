@@ -2,17 +2,22 @@ import { WORD_SETS } from '@/data/wordSetMiniCog'
 import { WordSet, EducationLevel } from '@/types'
 
 export function getWordSetByEducation(
-  educationLevel: EducationLevel
+  educationLevel: EducationLevel,
+  withIn: boolean
 ): WordSet {
+
+  let wordSetId: string
+
   if (educationLevel === 'below_p4') {
-    const set = WORD_SETS.find((s) => s.id === '7')
-    if (!set) throw new Error('Word set 7 not found')
-    return set
+    wordSetId = withIn ? '1' : '7'
+  } else {
+    wordSetId = withIn ? '4' : '6'
   }
 
-  // p4_or_above
-  const set = WORD_SETS.find((s) => s.id === '6')
-  if (!set) throw new Error('Word set 6 not found')
+  const set = WORD_SETS.find((s) => s.id === wordSetId)
+
+  if (!set) throw new Error(`Word set ${wordSetId} not found`)
+
   return set
 }
 
