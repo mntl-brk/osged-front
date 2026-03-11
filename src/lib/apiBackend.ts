@@ -15,18 +15,20 @@ export async function backendFetch<T>(
   const id = process.env.CF_ACCESS_CLIENT_ID
   const secret = process.env.CF_ACCESS_CLIENT_SECRET
 
-  if (!id || !secret) {
-    throw new Error('Cloudflare Access credentials missing')
+  const headers: Record<string, string> = {
+    ...(options?.headers as Record<string, string> || {}),
+    ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
+  }
+
+  // ใส่ CF header เฉพาะตอนที่มีค่า
+  if (id && secret) {
+    headers['CF-Access-Client-Id'] = id
+    headers['CF-Access-Client-Secret'] = secret
   }
 
   const res = await fetch(`${BACKEND_BASE}${path}`, {
     ...options,
-    headers: {
-      ...(options?.headers || {}),
-      ...(options?.body ? { 'Content-Type': 'application/json' } : {}),
-      'CF-Access-Client-Id': id,
-      'CF-Access-Client-Secret': secret,
-    },
+    headers,
     cache: 'no-store',
   })
 

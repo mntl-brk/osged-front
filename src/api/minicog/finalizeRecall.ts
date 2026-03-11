@@ -4,11 +4,6 @@ import { post } from '@/services/httpRequest'
 
 /* ================= Schema ================= */
 
-const SpeechSegmentSchema = object({
-  text: string(),
-  confidence: optional(number()),
-})
-
 const FinalizeRecallResponseSchema = object({
   recall_score: number(),
   recall_json_path: string(),
