@@ -186,7 +186,7 @@ export const BaseTGDSLayout: React.FC<BaseTGDSLayoutProps> = ({
           ) : isListening ? (
             <>
               <StopCircle size={38} />
-              กดเมื่อพูดจบ
+              หยุดพูด
             </>
           ) : (
             <>

@@ -1,93 +1,71 @@
 import { useRef, useState } from "react"
 
-const BACKEND_SOCKET = 'osged-api.online'
+const BACKEND_SOCKET = "osged-api.online"
 
 export function useRealtimeSpeech() {
 
   const socketRef = useRef<WebSocket | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
-  const processorRef = useRef<ScriptProcessorNode | null>(null)
+  const processorRef = useRef<AudioWorkletNode | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const [transcript, setTranscript] = useState("")
   const [isListening, setIsListening] = useState(false)
 
-  const [connectionState, setConnectionState] = useState<
-    "idle" | "connecting" | "connected"
-  >("idle")
+  const resetTranscript = () => setTranscript("")
 
-  const resetTranscript = () => {
-    setTranscript("")
-  }
+  /* ================= SOCKET ================= */
 
   const connectSocket = () => {
-
-    setConnectionState("connecting")
 
     const protocol =
       window.location.protocol === "https:" ? "wss" : "wss"
 
-    socketRef.current = new WebSocket(`${protocol}://${BACKEND_SOCKET}/ws/speech`)
-
-    socketRef.current.onopen = () => {
-      console.log("WebSocket connected")
-      setConnectionState("connected")
-    }
+    socketRef.current =
+      new WebSocket(`${protocol}://${BACKEND_SOCKET}/ws/speech`)
 
     socketRef.current.onmessage = (event) => {
 
       const data = JSON.parse(event.data)
 
-      if (!data.text) return
+      if (!data.text || !data.isFinal) return
 
-      // แสดงเฉพาะ final
-      if (!data.isFinal) return
-
-      setTranscript(prev => {
-
-        if (!prev) return data.text
-
-        if (data.text.startsWith(prev)) {
-          return data.text
-        }
-
-        if (prev.includes(data.text)) {
-          return prev
-        }
-
-        return `${prev} ${data.text}`
-
-      })
-
-    }
-
-    socketRef.current.onerror = (err) => {
-      console.error("WebSocket error", err)
+      setTranscript(prev =>
+        prev ? `${prev} ${data.text}` : data.text
+      )
     }
 
     socketRef.current.onclose = () => {
 
-      console.warn("WebSocket closed")
+      if (!isListening) return
 
-      setConnectionState("idle")
-
-      if (isListening) {
-        reconnectTimerRef.current = setTimeout(() => {
-          connectSocket()
-        }, 1000)
-      }
+      reconnectTimerRef.current = setTimeout(() => {
+        connectSocket()
+      }, 1000)
 
     }
 
   }
 
-  const startListening = async () => {
+  /* ================= START ================= */
 
-    resetTranscript()
+  const startListening = async (stream?: MediaStream) => {
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true
-    })
+    if (isListening) return
+
+    if (!stream) {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          channelCount: 1
+        }
+      })
+    }
+
+    streamRef.current = stream
 
     connectSocket()
 
@@ -102,29 +80,23 @@ export function useRealtimeSpeech() {
     const source =
       audioContextRef.current.createMediaStreamSource(stream)
 
-    processorRef.current =
-      audioContextRef.current.createScriptProcessor(
-        4096,
-        1,
-        1
-      )
+    await audioContextRef.current.audioWorklet.addModule(
+      "/audioProcessor.js"
+    )
 
-    source.connect(processorRef.current)
-    processorRef.current.connect(audioContextRef.current.destination)
+    const workletNode = new AudioWorkletNode(
+      audioContextRef.current,
+      "pcm-processor"
+    )
 
-    processorRef.current.onaudioprocess = (e) => {
+    source.connect(workletNode)
 
-      const inputData = e.inputBuffer.getChannelData(0)
+    workletNode.port.onmessage = (event) => {
 
-      const pcmData = new Int16Array(inputData.length)
-
-      for (let i = 0; i < inputData.length; i++) {
-        pcmData[i] =
-          Math.max(-1, Math.min(1, inputData[i])) * 0x7fff
-      }
+      const pcm = event.data
 
       if (socketRef.current?.readyState === WebSocket.OPEN) {
-        socketRef.current.send(pcmData.buffer)
+        socketRef.current.send(pcm.buffer)
       }
 
     }
@@ -132,6 +104,8 @@ export function useRealtimeSpeech() {
     setIsListening(true)
 
   }
+
+  /* ================= STOP ================= */
 
   const stopListening = () => {
 
@@ -144,6 +118,9 @@ export function useRealtimeSpeech() {
     socketRef.current?.close()
     socketRef.current = null
 
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current)
     }
@@ -155,7 +132,6 @@ export function useRealtimeSpeech() {
   return {
     transcript,
     isListening,
-    connectionState,
     startListening,
     stopListening,
     resetTranscript

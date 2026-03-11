@@ -44,10 +44,10 @@ export const TGDSAnswerPage: React.FC<Props> = ({
     useState<boolean | 'skip' | null>(null)
 
   const [hasDetectedAnswer, setHasDetectedAnswer] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const accumulatedTranscriptRef = useRef('')
+  const audioBlobRef = useRef<Blob | null>(null)
 
   /* ================= REALTIME SPEECH ================= */
 
@@ -59,25 +59,23 @@ export const TGDSAnswerPage: React.FC<Props> = ({
     resetTranscript
   } = useRealtimeSpeech()
 
-  /* ================= AUTOSKIP TIMER ================= */
+  /* ================= AUDIO ================= */
 
-  const { showHint, onUserActivity } = useTGDSAutoSkipTimer({
-    isAiSpeaking: isSpeaking,
-    isListening,
-    isSubmitting,
-    onSkip: () => {
-      onAnswer('skip')
-    }
-  })
+  const {
+    start: startAudio,
+    stop: stopAudio,
+    getStream
+  } = useTGDSAudioRecorder()
 
-  useEffect(() => {
-    onUserActivity()
-  }, [question])
+  /* ================= VIDEO ================= */
 
-  /* ================= MEDIA UPLOAD ================= */
-
-  const uploadTGDSVideo = useCallback(
-    async (blob: Blob): Promise<string> => {
+  const {
+    stopAndUpload,
+    startRecording,
+    destroyCamera,
+    isUploading
+  } = useTGDSRecordingUpload({
+    uploadFn: async (blob) => {
 
       const result = await uploadMedia({
         sessionId,
@@ -87,13 +85,14 @@ export const TGDSAnswerPage: React.FC<Props> = ({
       })
 
       return result.match(
-        (media) => media.media_id,
-        (error) => { throw error }
+        (m) => m.media_id,
+        (e) => { throw e }
       )
 
-    },
-    [sessionId, index]
-  )
+    }
+  })
+
+  /* ================= AUDIO UPLOAD ================= */
 
   const uploadTGDSSound = useCallback(
     async (blob: Blob): Promise<string> => {
@@ -106,56 +105,51 @@ export const TGDSAnswerPage: React.FC<Props> = ({
       })
 
       return result.match(
-        (media) => media.media_id,
-        (error) => { throw error }
+        (m) => m.media_id,
+        (e) => { throw e }
       )
 
     },
     [sessionId, index]
   )
 
-   /* ================= AUDIO RECORDING ================= */
+  /* ================= AUTOSKIP ================= */
 
-    const {
-      start: startAudio,
-      stop: stopAudio
-    } = useTGDSAudioRecorder()
+  const { showHint, onUserActivity } = useTGDSAutoSkipTimer({
+    isAiSpeaking: isSpeaking,
+    isListening,
+    isSubmitting,
+    onSkip: () => onAnswer('skip')
+  })
 
-    /* ================= VIDEO RECORDING ================= */
+  /* ================= RESET ================= */
 
-    const {
-      stopAndUpload,
-      startRecording,
-      destroyCamera,
-      isUploading
-    } = useTGDSRecordingUpload({
-      uploadFn: uploadTGDSVideo
-    })
+  const resetAnswer = useCallback(async () => {
 
+    accumulatedTranscriptRef.current = ''
+    audioBlobRef.current = null
 
-  /* ================= RECORD VIDEO ON QUESTION ================= */
+    resetTranscript()
 
-  useEffect(() => {
+    setFinalAnswer(null)
+    setHasDetectedAnswer(false)
 
-    setIsRecording(true)
+    await stopListening()
 
-    return () => {
-      setIsRecording(false)
-    }
+    await stopAudio()
 
-  }, [question])
+    await startRecording()
 
-  useEffect(() => {
-
-    return () => destroyCamera()
-
-  }, [destroyCamera])
-
-  /* ================= RESET STATE ================= */
+    
+  }, [resetTranscript, stopListening, stopAudio, startRecording])
 
   useEffect(() => {
     resetAnswer()
   }, [question])
+
+  useEffect(() => {
+    return () => destroyCamera()
+  }, [destroyCamera])
 
   /* ================= ANSWER DETECTION ================= */
 
@@ -178,27 +172,22 @@ export const TGDSAnswerPage: React.FC<Props> = ({
 
     if (!cleaned) return null
 
-    /* skip */
+    if (/ข้าม|ไม่ตอบ|ผ่าน|ขอข้าม/.test(cleaned))
+      return 'skip'
 
-    const skipRegex = /ข้าม|ไม่ตอบ|ผ่าน|ขอข้าม|ไม่อยากตอบ/
-    if (skipRegex.test(cleaned)) return 'skip'
+    if (cleaned === 'ไม่')
+      return false
 
-    /* negative */
+    if (/ไม่(ใช่|มี|จริง|เป็น|ได้)|เปล่า|ไม่มี/.test(cleaned))
+      return false
 
-    if (cleaned === 'ไม่') return false
-
-    const negativeRegex = /ไม่(ใช่|มี|จริง|เป็น|ได้)|เปล่า|ไม่มี/
-    if (negativeRegex.test(cleaned)) return false
-
-    /* positive */
-
-    const positiveRegex = /ใช่|มี|จริง|เป็น|ถูก/
-    if (positiveRegex.test(cleaned)) return true
+    if (/ใช่|มี|จริง|เป็น|ถูก/.test(cleaned))
+      return true
 
     return null
   }
 
-  /* ================= TRANSCRIPT LISTENER ================= */
+  /* ================= TRANSCRIPT ================= */
 
   useEffect(() => {
 
@@ -208,22 +197,33 @@ export const TGDSAnswerPage: React.FC<Props> = ({
 
     accumulatedTranscriptRef.current += ' ' + transcript
 
-    const fullTranscript = accumulatedTranscriptRef.current
-
-    const detected = processTranscriptForAnswer(fullTranscript)
+    const detected =
+      processTranscriptForAnswer(
+        accumulatedTranscriptRef.current
+      )
 
     if (detected !== null) {
 
-      stopListening()
+      const finalize = async () => {
 
-      setHasDetectedAnswer(true)
-      setFinalAnswer(detected)
+        await stopListening()
+
+        const blob = await stopAudio()
+
+        audioBlobRef.current = blob
+
+        setHasDetectedAnswer(true)
+        setFinalAnswer(detected)
+
+      }
+
+      finalize()
 
     }
 
   }, [transcript])
 
-  /* ================= LISTENING ================= */
+  /* ================= LISTEN ================= */
 
   const toggleListening = async () => {
 
@@ -232,7 +232,8 @@ export const TGDSAnswerPage: React.FC<Props> = ({
     if (isListening) {
 
       await stopListening()
-      await stopAudio()
+
+      audioBlobRef.current = await stopAudio()
 
     } else {
 
@@ -241,39 +242,22 @@ export const TGDSAnswerPage: React.FC<Props> = ({
       resetTranscript()
 
       await startAudio()
-      await startListening()
+
+      const stream = getStream()
+
+      if (stream) {
+        await startListening(stream)
+      }
 
     }
-
-  }
-
-  /* ================= RESET ================= */
-
-  const resetAnswer = async () => {
-
-    accumulatedTranscriptRef.current = ''
-
-    resetTranscript()
-
-    setFinalAnswer(null)
-    setHasDetectedAnswer(false)
-
-    await stopListening()
-    await stopAudio()
-
-    setIsRecording(false)
-
-    await startRecording()
-
-    setIsRecording(true)
-
   }
 
   /* ================= SUBMIT ================= */
 
   const handleSubmit = async () => {
 
-    if (finalAnswer === null || isSubmitting) return
+    if (finalAnswer === null || isSubmitting)
+      return
 
     setIsSubmitting(true)
 
@@ -281,19 +265,26 @@ export const TGDSAnswerPage: React.FC<Props> = ({
 
       const videoPromise = stopAndUpload()
 
-      const audioBlob = await stopAudio()
-
+      const audioBlob = audioBlobRef.current
+      console.log(audioBlob)
+      console.log(audioBlob?.size)
+      
       const audioPromise =
         audioBlob && audioBlob.size > 0
           ? uploadTGDSSound(audioBlob)
           : Promise.resolve(undefined)
 
-      const [videoMediaId, audioMediaId] = await Promise.all([
-        videoPromise,
-        audioPromise
-      ])
+      const [videoMediaId, audioMediaId] =
+        await Promise.all([
+          videoPromise,
+          audioPromise
+        ])
 
-      await onAnswer(finalAnswer, videoMediaId, audioMediaId)
+      await onAnswer(
+        finalAnswer,
+        videoMediaId,
+        audioMediaId
+      )
 
     } catch (e) {
 

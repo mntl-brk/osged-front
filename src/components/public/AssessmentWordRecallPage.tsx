@@ -211,8 +211,9 @@ export const AssessmentWordRecallPage: React.FC<AssessmentWordRecallPageProps> =
                     setTimeout(handleSubmit, 500)
     
                   } else {
-                   startListening()
                    resetTranscript()
+                    startListening()
+
                   }
                 }}
                 disabled={isSpeaking || isSubmitting}

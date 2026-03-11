@@ -13,15 +13,11 @@ export function useTGDSAudioRecorder({ enabled = true }: Options = {}) {
   const [isRecording, setIsRecording] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  /* ================= MIME SAFE ================= */
-
   const getSupportedMimeType = () => {
     const types = [
       'audio/webm;codecs=opus',
       'audio/webm',
-      'audio/mp4;codecs=mp4a',
-      'audio/mp4',
-      'audio/aac'
+      'audio/mp4'
     ]
 
     for (const type of types) {
@@ -33,30 +29,37 @@ export function useTGDSAudioRecorder({ enabled = true }: Options = {}) {
     return ''
   }
 
-  /* ================= INIT MIC ================= */
+    const initStream = async () => {
 
-  const initStream = async () => {
-    if (streamRef.current) return streamRef.current
+      if (streamRef.current) {
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        channelCount: 1,
-      },
-    })
+        const active = streamRef.current
+          .getTracks()
+          .some(t => t.readyState === "live")
 
-    streamRef.current = stream
-    return stream
-  }
+        if (active) return streamRef.current
 
-  /* ================= START ================= */
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          channelCount: 1
+        }
+      })
+
+      streamRef.current = stream
+      return stream
+    }
 
   const start = useCallback(async () => {
 
-    if (!enabled) return
-    if (isRecording) return
-
+    if (!enabled || isRecording) return
+    if (recorderRef.current) {
+      console.warn("Recorder already exists")
+      return
+    }
     try {
 
       setError(null)
@@ -65,10 +68,6 @@ export function useTGDSAudioRecorder({ enabled = true }: Options = {}) {
       const stream = await initStream()
 
       const mimeType = getSupportedMimeType()
-
-      if (!mimeType) {
-        console.warn("No supported audio mime type")
-      }
 
       const recorder = mimeType
         ? new MediaRecorder(stream, { mimeType })
@@ -80,71 +79,65 @@ export function useTGDSAudioRecorder({ enabled = true }: Options = {}) {
         }
       }
 
-      recorder.start()
+      recorder.start(1000)
 
       recorderRef.current = recorder
       setIsRecording(true)
 
     } catch (err) {
+
       console.error(err)
       setError('permission_denied')
+
     }
 
   }, [enabled, isRecording])
 
-  /* ================= STOP ================= */
+  const stop = useCallback(async (): Promise<Blob | null> => {
 
- const stop = useCallback(async (): Promise<Blob | null> => {
-  const recorder = recorderRef.current
+    const recorder = recorderRef.current
 
-  if (!recorder || recorder.state === 'inactive') {
-    return null
-  }
-
-  return new Promise((resolve) => {
-    recorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, {
-        type: recorder.mimeType || 'audio/webm',
-      })
-
-      streamRef.current?.getTracks().forEach(t => t.stop())
-      streamRef.current = null
-      recorderRef.current = null
-      setIsRecording(false)
-
-      resolve(blob)
+    if (!recorder || recorder.state === 'inactive') {
+      return null
     }
 
-    // บังคับให้เบราว์เซอร์ส่งข้อมูลที่บันทึกค้างไว้เข้า ondataavailable ทันที
-    try {
-      recorder.requestData()
-    } catch (e) {
-      // ดักเผื่อในกรณีที่เบราว์เซอร์บางตัวไม่รองรับ requestData()
-    }
+    return new Promise((resolve) => {
 
-    recorder.stop()
-  })
-}, [])
+      recorder.onstop = () => {
 
-  /* ================= FORCE STOP ================= */
+        const blob = new Blob(chunksRef.current, {
+          type: recorder.mimeType || 'audio/webm'
+        })
+
+        recorderRef.current = null
+        setIsRecording(false)
+
+        resolve(blob)
+
+      }
+
+      recorder.stop()
+
+    })
+
+  }, [])
 
   const forceStop = useCallback(() => {
 
     recorderRef.current?.stop()
-
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    streamRef.current = null
     recorderRef.current = null
-
     setIsRecording(false)
 
   }, [])
+
+  const getStream = () => streamRef.current
 
   return {
     start,
     stop,
     forceStop,
+    getStream,
     isRecording,
-    error,
+    error
   }
 }

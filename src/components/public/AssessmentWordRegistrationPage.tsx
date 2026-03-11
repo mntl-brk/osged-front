@@ -73,6 +73,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
       stopListening,
       resetTranscript
     } = useRealtimeSpeech()
+    
 
     const speakWords = async () => {
       if (hasPlayedAudio || isPlaying) return
