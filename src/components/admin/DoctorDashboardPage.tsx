@@ -94,7 +94,6 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
         tgds: { score: p.tgds_score ?? 0 },
         status: p.status,
         }));
-
         setPatients(mapped);
     } catch (err: any) {
         setError(err.message);
@@ -161,6 +160,8 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
         setIsDeleting(false)
     }
     }
+
+    
 
 
     {loading && (
@@ -281,6 +282,7 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {patients.map((patient) => (
+                            
                             <tr key={patient.id} className="hover:bg-blue-50/20 transition-colors group">
                                 <td className="p-6 font-black text-gray-900 text-lg">{patient.volunteer_code}</td>
                                 <td className="p-6 text-gray-500 text-sm font-medium">{formatDate(patient.completed_at)}</td>
@@ -321,6 +323,8 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
                                     {patient.miniCog.clockScore}/2
                                     </div>
                                 )}
+                                                                    {patient.miniCog.clockScore}/2
+
                                 </td>
                                 <td className="p-4 text-center">
                                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-xl font-black ${patient.tgds.score >= 6 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>

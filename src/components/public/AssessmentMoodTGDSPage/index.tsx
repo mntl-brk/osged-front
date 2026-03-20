@@ -21,7 +21,7 @@ export const AssessmentMoodTGDSPage: React.FC<Props> = ({ onComplete }) => {
     '/audio/tgds_guide.mp3',
     currentIdx === 0, 
     {
-      allowReplay: false,
+      allowReplay: true,
     }
   )
     

@@ -36,15 +36,6 @@ const SCORE_STYLE: Record<
     label: 'Incorrect',
     sub: 'ผิดทั้งหมด',
   },
-  // 1: {
-  //   bg: '#FEF3C7',
-  //   border: '#FCD34D',
-  //   text: '#92400E',
-  //   dot: '#F59E0B',
-  //   icon: Circle,
-  //   label: 'Partial',
-  //   sub: 'ถูกบางส่วน',
-  // },
   2: {
     bg: '#DCFCE7',
     border: '#86EFAC',

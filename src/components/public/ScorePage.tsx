@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Home, Phone, FileText, Activity, Brain, AlertCircle, ClipboardCheck, Clock, CheckCircle2 } from 'lucide-react';
 
 interface ScorePageProps {
@@ -21,6 +21,15 @@ export const ScorePage: React.FC<ScorePageProps> = ({
   const isHighRiskCog = rScore === 0;
   const isMildRiskCog = rScore > 0 && rScore < 3;
 
+  useEffect(() => {
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        stream.getTracks().forEach(t => t.stop())
+      })
+      .catch(() => {})
+
+  }, [])
   return (
     <div className="w-full max-w-4xl mx-auto px-6 py-12 animate-fade-in pb-40">
       
