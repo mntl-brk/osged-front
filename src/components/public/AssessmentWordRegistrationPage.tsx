@@ -54,7 +54,7 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
       '/audio/minicog_regis_intro.mp3',
       !introPlayed,
       {
-        allowReplay: false,
+        allowReplay: true,
         onEnd: () => setIntroPlayed(true)
       }
     )
@@ -82,6 +82,8 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
 
       try {
         setIsPlaying(true)
+        
+        await delay(2000)
 
         await playAudioUrl(
           `/audio/minicog_wordset/wordset-${wordSet.id}.mp3`,
@@ -95,6 +97,49 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
       }
     }
       
+    const showPlayButton =
+    attempt === 1 && !hasPlayedAudio && !completed;
+    const showMicSection =
+
+    !completed &&
+    (
+      (attempt === 1 && hasPlayedAudio) ||
+      (attempt >= 2)
+    );
+
+    const showNextButton = completed;
+    const [hasPlayedMicGuide, setHasPlayedMicGuide] = useState(false);
+
+      const {
+    isSpeaking: isMicGuideSpeaking,
+    play: playMicGuide,
+  } = useLocalVoiceGuide(
+    '/audio/minicog_show_mic.mp3',
+    false, 
+    {
+      allowReplay: true,
+      onEnd: () => {
+        setHasPlayedMicGuide(true)
+        resetSilenceTimer()
+      },
+    }
+  )
+
+  useEffect(() => {
+    if (!showMicSection) return
+    if (micGuideStartedRef.current) return
+
+    const timer = setInterval(() => {
+      if (!isSpeaking) {
+        micGuideStartedRef.current = true
+        playMicGuide()
+        clearInterval(timer)
+      }
+    }, 200)
+
+    return () => clearInterval(timer)
+  }, [showMicSection, isSpeaking])
+    
     const handleAutoSkip = async () => {
 
       if (isEvaluating) return
@@ -186,35 +231,6 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
 }, []);
 
 
-  const showPlayButton =
-  attempt === 1 && !hasPlayedAudio && !completed;
-  const showMicSection =
-
-  !completed &&
-  (
-    (attempt === 1 && hasPlayedAudio) ||
-    (attempt >= 2)
-  );
-
-  const showNextButton = completed;
-  const [hasPlayedMicGuide, setHasPlayedMicGuide] = useState(false);
-
-  const {
-    isSpeaking: isMicGuideSpeaking,
-    play: playMicGuide,
-  } = useLocalVoiceGuide(
-    '/audio/minicog_show_mic.mp3',
-    false, 
-    {
-      allowReplay: false,
-      onEnd: () => {
-        setHasPlayedMicGuide(true)
-        resetSilenceTimer()
-      },
-    }
-  )
-
-    
   useEffect(() => {
     if (!sessionId) return
 
@@ -266,11 +282,11 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
       let audioPath = ''
 
       if (completeStatus === 'correct') {
-        audioPath = '/audio/minicog_complete_correct.mp3'
+        audioPath = '/audio/minicog_complete.mp3'
       }
 
       if (completeStatus === 'attempted') {
-        audioPath = '/audio/minicog_complete_attempted.mp3'
+        audioPath = '/audio/minicog_complete.mp3'
       }
 
       try {
@@ -285,21 +301,6 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
   }, [completed, completeStatus, autoReplay])
 
   const micGuideStartedRef = useRef(false)
-
-  useEffect(() => {
-    if (!showMicSection) return
-    if (micGuideStartedRef.current) return
-
-    const timer = setInterval(() => {
-      if (!isSpeaking) {
-        micGuideStartedRef.current = true
-        playMicGuide()
-        clearInterval(timer)
-      }
-    }, 200)
-
-    return () => clearInterval(timer)
-  }, [showMicSection, isSpeaking])
 
   const evaluateAnswer = async () => {
     if (!sessionId || isEvaluating) return
@@ -627,3 +628,6 @@ const ListeningWave = () => (
     ))}
   </div>
 );
+
+const delay = (ms: number) =>
+  new Promise(resolve => setTimeout(resolve, ms))

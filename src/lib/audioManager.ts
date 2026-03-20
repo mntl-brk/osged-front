@@ -16,10 +16,19 @@ const notify = () => {
 
 export const registerReplay = (fn: () => void) => {
   replayHandler = fn
+
 }
 
 export function replayLast() {
+
+  if (replayHandler) {
+    replayHandler()
+    return
+  }
+
+
   if (!lastAudioPath) return
+
 
   if (currentAudio) {
     currentAudio.pause()
@@ -42,7 +51,13 @@ export function replayLast() {
   audio.play()
     .then(() => {
       setAudioSpeaking()
-    })
+      
+      registerReplay(() => {
+          audio.pause()
+          audio.currentTime = 0
+          audio.play()
+        })
+      })
     .catch(() => {
       setAudioIdle()
     })
@@ -155,10 +170,12 @@ export function initAudioManager() {
   const saved = localStorage.getItem('lastAudioPath')
   if (saved) {
     lastAudioPath = saved
-
-    notify()
+    currentAudio = new Audio(saved)
   }
+
+  notify()
 }
+
 
 export const playAudioUrl = async (
   path: string,
@@ -167,11 +184,9 @@ export const playAudioUrl = async (
 ) => {
   stopAudio()
 
-  return new Promise<void>((resolve, reject) => {
-    if (options?.remember !== false) {
-      setLastAudio(path)
-    }
 
+  return new Promise<void>((resolve, reject) => {
+  
     const audio = new Audio(path)
     currentAudio = audio
 
@@ -196,10 +211,19 @@ export const playAudioUrl = async (
     audio.addEventListener('ended', handleEnd)
     audio.addEventListener('error', handleError)
 
-    audio.play()
-      .then(() => {
-        setAudioSpeaking()
+    audio.play().then(() => {
+      setAudioSpeaking()
+
+      registerReplay(() => {
+        const replayAudio = new Audio(path)
+        replayAudio.play()
       })
+
+      if (options?.remember !== false) {
+        setLastAudio(path)
+      }
+    })
+      
       .catch(handleError)
   })
 }

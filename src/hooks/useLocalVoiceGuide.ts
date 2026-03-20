@@ -49,6 +49,7 @@ export const useLocalVoiceGuide = (
       setStatus('preparing')
       setAudioPreparing()
 
+      audio.pause()
       audio.currentTime = 0
 
       audio.onended = () => {
@@ -61,32 +62,46 @@ export const useLocalVoiceGuide = (
 
       setStatus('speaking')
       setAudioSpeaking()
+
+      if (allowReplay) {
+        registerReplay(() => {
+          audio.pause()
+          audio.currentTime = 0
+          audio.play()
+        })
+
+        setLastAudio(audioPath)
+
+      }
+
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
         console.error(err)
       }
     }
-  }, [audioPath, onEnd])
+  }, [audioPath, onEnd, allowReplay])
 
   const replay = useCallback(() => {
     if (!allowReplay) return
+
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+    }
+
+
     play()
+
+
   }, [allowReplay, play])
 
-  // autoplay
+
   useEffect(() => {
     if (!autoPlay) return
-    if (hasPlayedRef.current) return
 
-    hasPlayedRef.current = true
+    hasPlayedRef.current = false
     play()
-  }, [autoPlay, play])
-
-  useEffect(() => {
-    if (allowReplay) {
-      registerReplay(replay)
-    }
-  }, [allowReplay, replay])
+  }, [autoPlay, audioPath])
 
   return {
     status,

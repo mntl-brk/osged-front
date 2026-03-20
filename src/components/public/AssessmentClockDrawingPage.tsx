@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { ArrowRight, RotateCcw, ClockFading, Trash2 } from 'lucide-react';
-import { useVoiceGuide } from '@/hooks/useVoiceGuide';
 import { useRequireLandscape } from '@/hooks/useRequireLandscape';
 import { RotateDeviceOverlay } from '../RotateDeviceOverlay';
 import { ClockDemoOverlay } from '../ClockDemoOverlay';

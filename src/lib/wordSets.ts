@@ -9,7 +9,7 @@ export function getWordSetByEducation(
   let wordSetId: string
 
   if (educationLevel === 'below_p4') {
-    wordSetId = withIn ? '1' : '7'
+    wordSetId = '7'
   } else {
     wordSetId = withIn ? '4' : '6'
   }
