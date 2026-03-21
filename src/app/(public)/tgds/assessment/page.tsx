@@ -9,13 +9,9 @@ import { completeTGDS } from '@/api/tgds/completeTGDS'
 export default function TGDSAssessmentRoute() {
   const router = useRouter()
   const setMoodScore = useAssessmentStore((s) => s.setMoodScore)
-  const sessionId = useAssessmentStore((s) => s.sessionId)
-
-  if (!sessionId) {
-      router.replace('/')
-      return
-  }
-
+  const sessionId =
+    useAssessmentStore((s) => s.sessionId) 
+    
   return (
     <AppShell>
       <AssessmentMoodTGDSPage

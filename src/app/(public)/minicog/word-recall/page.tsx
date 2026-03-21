@@ -9,7 +9,8 @@ import { finalizeRecall } from '@/api/minicog/finalizeRecall'
 export default function WordRecallRoute() {
   const router = useRouter()
 
-  const sessionId = useAssessmentStore((s) => s.sessionId)
+  const sessionId =
+  useAssessmentStore((s) => s.sessionId)
   const setRecallScore = useAssessmentStore((s) => s.setRecallScore)
 
   if (!sessionId) return null

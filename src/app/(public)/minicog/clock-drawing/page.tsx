@@ -14,12 +14,17 @@ import { base64ToBlob } from '@/utils/base64ToBlob'
 export default function ClockDrawingRoute() {
   const router = useRouter()
 
-  const sessionId = useAssessmentStore((s) => s.sessionId)
+  const sessionId =
+  useAssessmentStore((s) => s.sessionId)
+    
+  const hasHydrated = useAssessmentStore((s) => s.hasHydrated)
   const { stopAndGetVideo } = useClockRecording(!!sessionId)
 
   const startedRef = useRef(false)
 
   useEffect(() => {
+    if (!hasHydrated) return 
+
     if (!sessionId) {
       router.replace('/')
       return

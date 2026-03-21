@@ -13,8 +13,9 @@ export default function WordRegistrationRoute() {
 
   const hasHydrated = useAssessmentStore((s) => s.hasHydrated)
   const demographics = useAssessmentStore((s) => s.demographics)
-  const sessionId = useAssessmentStore((s) => s.sessionId)
-
+  const sessionId =
+  useAssessmentStore((s) => s.sessionId)
+  
   const currentWordSet = useAssessmentStore((s) => s.currentWordSet)
   const withIn = useAssessmentStore((s) => s.withIn_test)
   const setCurrentWordSet = useAssessmentStore((s) => s.setCurrentWordSet)
@@ -44,7 +45,6 @@ export default function WordRegistrationRoute() {
       }
 
 
-      console.log(withIn)
       if (!currentWordSet) {
         const wordSet = getWordSetByEducation(demographics.educationLevel, withIn!)
         setCurrentWordSet(wordSet)
