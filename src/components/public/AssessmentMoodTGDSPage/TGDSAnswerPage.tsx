@@ -72,7 +72,8 @@ export const TGDSAnswerPage: React.FC<Props> = ({
   const {
     stopAndUpload,
     startRecording,
-    destroyCamera,
+    stopRecordingOnly,
+    initCamera,
     isUploading
   } = useTGDSRecordingUpload({
     uploadFn: async (blob) => {
@@ -91,6 +92,10 @@ export const TGDSAnswerPage: React.FC<Props> = ({
 
     }
   })
+
+  useEffect(() => {
+    initCamera()
+  }, [])
 
   /* ================= AUDIO UPLOAD ================= */
 
@@ -119,10 +124,17 @@ export const TGDSAnswerPage: React.FC<Props> = ({
     isAiSpeaking: isSpeaking,
     isListening,
     isSubmitting,
-    onSkip: () => onAnswer('skip')
+    
+    onSkip: () => {
+      stopRecordingOnly()
+      onAnswer('skip')
+    }
   })
 
   /* ================= RESET ================= */
+
+  const [isReadyToRecord, setIsReadyToRecord] = useState(false)
+  const hasSpokenRef = useRef(false)
 
   const resetAnswer = useCallback(async () => {
 
@@ -138,60 +150,66 @@ export const TGDSAnswerPage: React.FC<Props> = ({
 
     await stopAudio()
 
-    await startRecording()
+    stopRecordingOnly()
+    setIsReadyToRecord(true)
 
     
-  }, [resetTranscript, stopListening, stopAudio, startRecording])
+  }, [resetTranscript, stopListening, stopAudio, stopRecordingOnly])
 
   useEffect(() => {
     resetAnswer()
   }, [question])
 
   useEffect(() => {
-    return () => destroyCamera()
-  }, [destroyCamera])
+    return () => stopRecordingOnly()
+  }, [stopRecordingOnly])
 
   /* ================= ANSWER DETECTION ================= */
 
-  const processTranscriptForAnswer = (
-    fullTranscript: string
-  ): boolean | 'skip' | null => {
+const processTranscriptForAnswer = (
+  fullTranscript: string
+): boolean | 'skip' | null => {
 
-    if (!fullTranscript) return null
+  if (!fullTranscript) return null
 
-    let cleaned = fullTranscript
-      .toLowerCase()
-      .replace(/\s+/g, '')
-      .replace(/[.,!?]/g, '')
-      .replace(/ครับ|ค่ะ|จ้ะ|จ้า|นะ|เลย|แหละ|หรอก|ลูก|หลาน/g, '')
+  let cleaned = fullTranscript
+    .toLowerCase()
+    .replace(/[.,!?]/g, '')
+    .replace(/ครับ|ค่ะ|จ้ะ|จ้า|นะ|เลย|แหละ|หรอก|ลูก|หลาน/g, '')
+    .trim()
 
-    if (cleaned.includes('หรือไม่')) {
-      const parts = cleaned.split('หรือไม่')
-      cleaned = parts[parts.length - 1]
-    }
-
-    if (!cleaned) return null
-
-    if (/ข้าม|ไม่ตอบ|ผ่าน|ขอข้าม/.test(cleaned))
-      return 'skip'
-
-    if (cleaned === 'ไม่')
-      return false
-
-    if (/ไม่(ใช่|มี|จริง|เป็น|ได้)|เปล่า|ไม่มี/.test(cleaned))
-      return false
-
-    if (/ใช่|มี|จริง|เป็น|ถูก/.test(cleaned))
-      return true
-
-    return null
+  if (cleaned.includes('หรือไม่')) {
+    cleaned = cleaned.split('หรือไม่').pop()!.trim()
   }
 
-  /* ================= TRANSCRIPT ================= */
+  if (!cleaned) return null
+
+  const tail = cleaned.slice(-15)
+
+  // skip
+   if (/ข้าม|ไม่ตอบ|ผ่าน/.test(tail)) return 'skip'
+
+  // negative
+  if (
+    /ไม่(ใช่)?$/.test(tail) ||
+    /ไม่มี$/.test(tail) ||
+    /เปล่า$/.test(tail)
+  ) return false
+
+  // positive
+  if (/ใช่$/.test(tail)) return true
+
+  return null
+}
+/* ================= TRANSCRIPT ================= */
 
   useEffect(() => {
 
     if (!transcript) return
+  
+    if (transcript) {
+      hasSpokenRef.current = true
+    }
 
     onUserActivity()
 
@@ -234,12 +252,23 @@ export const TGDSAnswerPage: React.FC<Props> = ({
       await stopListening()
 
       audioBlobRef.current = await stopAudio()
+      stopRecordingOnly()
+      return
+
 
     } else {
 
       accumulatedTranscriptRef.current = ''
 
       resetTranscript()
+      if (hasSpokenRef.current) {
+        stopRecordingOnly()
+        hasSpokenRef.current = false
+      }
+
+      await startRecording()
+
+      await new Promise(r => setTimeout(r, 150))
 
       await startAudio()
 
@@ -266,8 +295,6 @@ export const TGDSAnswerPage: React.FC<Props> = ({
       const videoPromise = stopAndUpload()
 
       const audioBlob = audioBlobRef.current
-      console.log(audioBlob)
-      console.log(audioBlob?.size)
       
       const audioPromise =
         audioBlob && audioBlob.size > 0
@@ -279,7 +306,8 @@ export const TGDSAnswerPage: React.FC<Props> = ({
           videoPromise,
           audioPromise
         ])
-
+      
+      stopRecordingOnly()
       await onAnswer(
         finalAnswer,
         videoMediaId,

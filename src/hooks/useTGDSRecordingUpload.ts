@@ -29,10 +29,8 @@ export function useTGDSRecordingUpload({ uploadFn }: Options) {
 
   /* ================= START ================= */
 
-  const startRecording = useCallback(async () => {
-    if (isRecording) return
-
-    chunksRef.current = []
+  const initCamera = useCallback(async () => {
+    if (streamRef.current) return
 
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
@@ -45,6 +43,15 @@ export function useTGDSRecordingUpload({ uploadFn }: Options) {
     })
 
     streamRef.current = stream
+  }, [])
+
+  const startRecording = useCallback(async () => {
+    if (isRecording) return
+
+    await initCamera()
+
+    const stream = streamRef.current!
+    chunksRef.current = []
 
     const mimeType = getSupportedMimeType()
     mimeTypeRef.current = mimeType
@@ -67,7 +74,7 @@ export function useTGDSRecordingUpload({ uploadFn }: Options) {
     recorderRef.current = recorder
     setIsRecording(true)
 
-  }, [isRecording])
+  }, [isRecording, initCamera])
 
   /* ================= STOP ================= */
 
@@ -92,8 +99,6 @@ export function useTGDSRecordingUpload({ uploadFn }: Options) {
 
     })
 
-    streamRef.current?.getTracks().forEach(t => t.stop())
-    streamRef.current = null
     recorderRef.current = null
     setIsRecording(false)
 
@@ -110,30 +115,34 @@ export function useTGDSRecordingUpload({ uploadFn }: Options) {
 
   }, [uploadFn])
 
-  const destroyCamera = useCallback(() => {
+  const stopRecordingOnly = useCallback(() => {
 
-  const recorder = recorderRef.current
+    const recorder = recorderRef.current
 
-  if (recorder && recorder.state !== 'inactive') {
-    try {
-      recorder.stop()
-    } catch {}
-  }
+    if (recorder && recorder.state !== 'inactive') {
+      try {
+        recorder.stop()
+      } catch {}
+    }
 
-  streamRef.current?.getTracks().forEach(t => t.stop())
+    recorderRef.current = null
+    chunksRef.current = []
 
-  recorderRef.current = null
-  streamRef.current = null
-  chunksRef.current = []
+    setIsRecording(false)
 
-  setIsRecording(false)
+  }, [])
 
-}, [])
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach(t => t.stop())
+    streamRef.current = null
+  }, [])
 
   return {
     startRecording,
     stopAndUpload,
-    destroyCamera,
+    stopRecordingOnly,
+    initCamera,
+    stopCamera,
     isRecording,
     isUploading
   }
