@@ -70,7 +70,7 @@ export default function PatientDetailClient({ patient }: Props) {
     }
 
     const [totalScore, setTotalScore] = useState(
-    patient.miniCog?.score ?? 0
+    patient.miniCog?.score ?? null
     )
 
     const handleClockScore = async (score: 0 | 2) => {
@@ -513,12 +513,19 @@ export default function PatientDetailClient({ patient }: Props) {
                             <div className="mt-12 bg-blue-50 border border-blue-100 rounded-3xl p-8 flex items-center justify-between">
 
                             <div>
-                                <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-1">
+                             <p className="text-xs font-bold text-blue-500 uppercase tracking-widest mb-1">
                                 Mini-Cog Total Score
                                 </p>
+
                                 <p className="text-5xl font-black text-blue-800">
-                                {totalScore} / 5
+                                {totalScore !== null ? `${totalScore} / 5` : '- / 5'}
                                 </p>
+
+                                {totalScore === null && (
+                                <p className="text-sm text-gray-400 mt-2 font-semibold">
+                                    รอการให้คะแนน Clock Drawing
+                                </p>
+                                )}
                             </div>
 
                             <Brain size={52} className="text-blue-300" />

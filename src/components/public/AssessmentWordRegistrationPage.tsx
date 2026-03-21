@@ -82,8 +82,6 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
 
       try {
         setIsPlaying(true)
-        
-        await delay(2000)
 
         await playAudioUrl(
           `/audio/minicog_wordset/wordset-${wordSet.id}.mp3`,
@@ -273,33 +271,6 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
     isWaitingMicGuide;
    
 
-  useEffect(() => {
-    if (!completed) return
-    if (autoReplay) return
-    if (hasSpokenCompletion.current) return
-
-    const run = async () => {
-      let audioPath = ''
-
-      if (completeStatus === 'correct') {
-        audioPath = '/audio/minicog_complete.mp3'
-      }
-
-      if (completeStatus === 'attempted') {
-        audioPath = '/audio/minicog_complete.mp3'
-      }
-
-      try {
-        await playAudioUrl(audioPath)
-        hasSpokenCompletion.current = true
-      } catch (err) {
-        console.warn('Completion audio failed', err)
-      }
-    }
-
-    run()
-  }, [completed, completeStatus, autoReplay])
-
   const micGuideStartedRef = useRef(false)
 
   const evaluateAnswer = async () => {
@@ -316,8 +287,20 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
       setAttempt(result.attempt)
 
       if (result.completed) {
+            
         setCompleteStatus(result.correct ? 'correct' : 'attempted')
         setCompleted(true)
+
+        try {
+            await playAudioUrl('/audio/minicog_complete.mp3')
+        } catch (err) {
+            console.warn('Completion audio failed', err)
+        }
+        
+        hasSpokenCompletion.current = true
+
+          
+
       } else {
         // ผิดรอบแรก → auto replay
         if (result.attempt === 2) {
@@ -503,21 +486,21 @@ export const AssessmentWordRegistrationPage: React.FC<AssessmentWordRegistration
 
           {/* ===== Mic Button (Primary) ===== */}
           <button
-             onClick={() => {
-                if (isAiSpeaking || isEvaluating) return;
+            onClick={async () => {
+                if (isAiSpeaking || isEvaluating) return
+
                 if (isListening) {
                   setIsEvaluating(true)
 
-                  stopListening()
+                  await stopListening()
 
-                  setTimeout(() => {
-                    evaluateAnswer()
-                  }, 500)
+                  await new Promise(r => setTimeout(r, 200))
+
+                  await evaluateAnswer()
 
                 } else {
                   resetTranscript()
-                  startListening()
-
+                  await startListening()
                 }
               }}
             disabled={isAiSpeaking || isEvaluating}
@@ -628,6 +611,3 @@ const ListeningWave = () => (
     ))}
   </div>
 );
-
-const delay = (ms: number) =>
-  new Promise(resolve => setTimeout(resolve, ms))

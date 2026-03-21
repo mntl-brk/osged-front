@@ -323,8 +323,6 @@ export const DoctorDashboardPage: React.FC<DoctorDashboardPageProps> = ({
                                     {patient.miniCog.clockScore}/2
                                     </div>
                                 )}
-                                                                    {patient.miniCog.clockScore}/2
-
                                 </td>
                                 <td className="p-4 text-center">
                                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-xl font-black ${patient.tgds.score >= 6 ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'}`}>
