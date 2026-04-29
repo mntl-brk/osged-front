@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
 
 interface HeroProps {
   onStart: () => void;
@@ -9,62 +9,94 @@ interface HeroProps {
 
 export const Hero: React.FC<HeroProps> = ({ onStart, onOpenInfo, onOpenPDPA }) => {
   return (
-    <section className="flex flex-col items-center justify-center flex-grow min-h-[90vh] py-12 px-6 text-center max-w-4xl mx-auto w-full animate-fade-in">
-      
-      {/* 1. Header (H1) - Large and Bold */}
-      <h1 className="text-3xl md:text-5xl font-bold text-gray-900 leading-tight md:leading-snug mb-6">
-        OSGED – ระบบคัดกรอง<br className="hidden md:block" />
-        <span className="text-primary">การรู้คิดและอารมณ์</span>สำหรับผู้สูงอายุ
-      </h1>
+    <section className="relative w-full overflow-hidden">
+      {/* Background Decor */}
+      <div className="absolute top-0 right-0 w-1/3 h-full bg-blue-50/50 -z-10 rounded-l-[100px] hidden lg:block" />
+      <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10" />
 
-      {/* 2. Description - Simple language, readable */}
-      <div className="text-lg md:text-2xl text-gray-600 font-medium mb-10 max-w-2xl leading-relaxed">
-        <p>ช่วยประเมินเบื้องต้นด้านความจำ การคิด และอารมณ์</p>
-        <p className="mt-2 text-gray-500 text-base md:text-xl">
-          (ใช้เวลาทำประมาณ 10-15 นาที)
-        </p>
-      </div>
+      <div className="max-w-7xl mx-auto px-6 py-16 md:py-24 flex flex-col lg:flex-row items-center gap-12">
 
-      {/* 3. Primary Button (CTA) - Very large, accessible target area */}
-      <button 
-        onClick={onStart}
-        className="
-          w-full max-w-md 
-          bg-primary hover:bg-primaryHover 
-          text-white 
-          text-xl md:text-2xl font-semibold 
-          py-5 px-8 
-          rounded-2xl 
-          shadow-lg hover:shadow-xl 
-          transform transition-all duration-200 active:scale-95
-          flex items-center justify-center gap-3
-          mb-6
-        "
-        aria-label="เริ่มทำแบบคัดกรอง"
-      >
-        <span>เริ่มคัดกรอง</span>
-        <ArrowRight size={28} strokeWidth={3} />
-      </button>
+        {/* Left Column: Text Content */}
+        <div className="flex-1 text-center lg:text-left animate-fade-in">
 
-      {/* 4. PDPA & Disclaimer - Smaller text but readable, clear links */}
-      <div className="text-sm md:text-base text-gray-500 bg-gray-50 p-4 rounded-lg">
-        <div className="flex flex-wrap justify-center gap-x-2 gap-y-1">
-          <button 
-            onClick={onOpenInfo}
-            className="text-primary hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-primary rounded px-1"
-          >
-            [ข้อควรรู้ก่อนยืนยันข้อมูล]
-          </button>
-          <span className="text-gray-400">·</span>
-          <button 
-            onClick={onOpenPDPA}
-            className="text-primary hover:underline font-medium focus:outline-none focus:ring-2 focus:ring-primary rounded px-1"
-          >
-            [นโยบายคุ้มครองข้อมูลส่วนบุคคล (PDPA)]
-          </button>
+          <h1 className="text-4xl md:text-6xl font-black text-gray-900 leading-[1.1] mb-8">
+            OSGED – ระบบคัดกรอง<br />
+            <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">
+              การรู้คิดและอารมณ์
+            </span><br />
+            สำหรับผู้สูงอายุ
+          </h1>
+
+          <div className="text-xl md:text-2xl text-gray-600 font-medium mb-10 max-w-2xl leading-relaxed">
+            <p>ช่วยประเมินเบื้องต้นด้านความจำ การคิด และอารมณ์</p>
+            <p className="mt-2 text-gray-400 text-base md:text-lg italic">
+              ✨ ใช้เวลาทำเพียง 10-15 นาที ทราบผลทันที
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <button
+              onClick={onStart}
+              className="
+                group w-full sm:w-auto
+                bg-primary hover:bg-primaryHover 
+                text-white 
+                text-xl md:text-2xl font-bold 
+                py-5 px-10 
+                rounded-2xl 
+                shadow-[0_20px_50px_rgba(37,99,235,0.3)]
+                hover:shadow-[0_20px_50px_rgba(37,99,235,0.4)]
+                transform transition-all duration-300 hover:-translate-y-1 active:scale-95
+                flex items-center justify-center gap-3
+              "
+            >
+              <span>เริ่มคัดกรอง</span>
+              <ArrowRight className="group-hover:translate-x-1 transition-transform" size={28} strokeWidth={3} />
+            </button>
+
+            <button
+              onClick={onOpenInfo}
+              className="w-full sm:w-auto px-8 py-5 text-gray-600 font-bold text-lg hover:bg-gray-50 rounded-2xl transition-colors"
+            >
+              ดูข้อมูลโครงการ
+            </button>
+          </div>
+
+          {/* PDPA Footer */}
+          <div className="mt-12 pt-8 border-t border-gray-100">
+            <button
+              onClick={onOpenPDPA}
+              className="text-gray-400 hover:text-primary text-sm flex items-center gap-2 mx-auto lg:mx-0 transition-colors"
+            >
+              <div className="w-1.5 h-1.5 bg-gray-300 rounded-full" />
+              นโยบายคุ้มครองข้อมูลส่วนบุคคล (PDPA)
+            </button>
+          </div>
         </div>
-      </div>
 
+        {/* Right Column: Illustration */}
+        <div className="flex-1 relative w-full max-w-xl animate-fade-in delay-200">
+          <div className="relative rounded-[40px] overflow-hidden shadow-2xl border-8 border-white">
+            <img
+              src="/hero-illustration.png"
+              alt="Elderly Care Illustration"
+              className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
+            />
+          </div>
+
+          {/* Floating Card UI for visual depth */}
+          <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-3xl shadow-xl border border-gray-100 hidden md:flex items-center gap-4 animate-bounce-slow">
+            <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+              <CheckCircle2 size={24} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900">แม่นยำสูง</p>
+              <p className="text-xs text-gray-400">อ้างอิงหลักการแพทย์</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </section>
   );
 };

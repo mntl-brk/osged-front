@@ -1,36 +1,75 @@
-import React from 'react';
-import { BookOpen } from 'lucide-react';
-
-interface InfoSectionProps {
-  onReadMore: () => void;
-}
+import { BookOpen, ShieldCheck, Zap, HeartPulse } from 'lucide-react';
 
 export const InfoSection: React.FC<InfoSectionProps> = ({ onReadMore }) => {
+  const features = [
+    {
+      icon: <Zap className="text-yellow-500" />,
+      title: "รวดเร็ว",
+      description: "ใช้เวลาเพียง 10-15 นาที ในการคัดกรองเบื้องต้น"
+    },
+    {
+      icon: <ShieldCheck className="text-green-500" />,
+      title: "แม่นยำ",
+      description: "พัฒนาและทดสอบโดยทีมแพทย์ผู้เชี่ยวชาญด้านสมอง"
+    },
+    {
+      icon: <HeartPulse className="text-red-500" />,
+      title: "ใส่ใจ",
+      description: "ออกแบบมาเพื่อผู้สูงอายุโดยเฉพาะ ใช้งานง่าย ไม่ซับซ้อน"
+    }
+  ];
+
   return (
-    <section className="bg-gray-50 py-16 px-6 border-t border-gray-100">
-      <div className="max-w-4xl mx-auto text-center">
-        
-        <div className="inline-flex items-center justify-center p-3 bg-blue-100 rounded-full mb-4 text-primary">
-            <BookOpen size={32} />
+    <section className="bg-white py-24 px-6 relative overflow-hidden">
+      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+      
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-16 animate-fade-in">
+          <div className="inline-flex items-center justify-center p-3 bg-blue-50 rounded-2xl mb-6 text-primary">
+            <BookOpen size={40} />
+          </div>
+          <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-6">
+            OSGED คืออะไร?
+          </h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            ระบบคัดกรองอัจฉริยะที่พัฒนาขึ้นเพื่อช่วยให้ผู้สูงอายุและครอบครัวสามารถตรวจสอบ
+            ภาวะสุขภาพจิตเบื้องต้นได้ด้วยตนเอง สะดวก รวดเร็ว และแม่นยำ 
+            โดยทีมแพทย์และนักวิจัยผู้เชี่ยวชาญ
+          </p>
         </div>
 
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">
-          OSGED คืออะไร?
-        </h2>
-        
-        <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
-          ระบบคัดกรองอัจฉริยะที่พัฒนาขึ้นเพื่อช่วยให้ผู้สูงอายุและครอบครัวสามารถตรวจสอบ
-          ภาวะสุขภาพจิตเบื้องต้นได้ด้วยตนเอง สะดวก รวดเร็ว และแม่นยำ 
-          โดยทีมแพทย์และนักวิจัยผู้เชี่ยวชาญ
-        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          {features.map((f, i) => (
+            <div 
+              key={i} 
+              className="bg-gray-50 p-8 rounded-[32px] border border-gray-100 hover:bg-white hover:shadow-2xl hover:shadow-blue-100/50 transition-all duration-300 group"
+            >
+              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform">
+                {f.icon}
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">{f.title}</h3>
+              <p className="text-gray-500 leading-relaxed">{f.description}</p>
+            </div>
+          ))}
+        </div>
 
-        <button 
-          onClick={onReadMore}
-          className="text-primary font-semibold text-lg hover:bg-blue-50 px-6 py-3 rounded-xl border-2 border-primary transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-        >
-          อ่านข้อมูลโครงการ & คำถามที่พบบ่อย
-        </button>
-
+        <div className="text-center">
+          <button 
+            onClick={onReadMore}
+            className="
+              inline-flex items-center gap-3
+              bg-white border-2 border-primary text-primary 
+              font-bold text-lg 
+              px-10 py-4 rounded-2xl 
+              hover:bg-primary hover:text-white 
+              transition-all duration-300 
+              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary
+              shadow-lg shadow-blue-50
+            "
+          >
+            อ่านข้อมูลโครงการ & คำถามที่พบบ่อย
+          </button>
+        </div>
       </div>
     </section>
   );

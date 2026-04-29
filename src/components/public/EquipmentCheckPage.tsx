@@ -1,0 +1,337 @@
+'use client'
+
+import React, { useState, useRef, useEffect, useCallback } from 'react'
+import {
+  Camera,
+  Mic,
+  Volume2,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+  RefreshCw,
+  Play
+} from 'lucide-react'
+import { useRouter } from 'next/navigation'
+
+interface Status {
+  type: 'idle' | 'loading' | 'success' | 'error'
+  message?: string
+}
+
+export const EquipmentCheckPage: React.FC = () => {
+  const router = useRouter()
+
+  const [cameraStatus, setCameraStatus] = useState<Status>({ type: 'idle' })
+  const [micStatus, setMicStatus] = useState<Status>({ type: 'idle' })
+  const [speakerStatus, setSpeakerStatus] = useState<Status>({ type: 'idle' })
+
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const [volume, setVolume] = useState(0)
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      audioContextRef.current?.close()
+    }
+  }, [])
+
+  /* ================= CAMERA CHECK ================= */
+  const checkCamera = async () => {
+    setCameraStatus({ type: 'loading' })
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 480, height: 360 },
+        audio: false
+      })
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+      }
+
+      // Keep track of the video tracks
+      if (!streamRef.current) {
+        streamRef.current = stream
+      } else {
+        stream.getTracks().forEach(t => streamRef.current?.addTrack(t))
+      }
+
+      setCameraStatus({ type: 'success' })
+    } catch (err) {
+      console.error(err)
+      setCameraStatus({ type: 'error', message: 'ไม่สามารถเปิดกล้องได้' })
+    }
+  }
+
+  /* ================= MICROPHONE CHECK ================= */
+  const checkMic = async () => {
+    setMicStatus({ type: 'loading' })
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false
+      })
+
+      // Set up Audio Context for Volume Meter
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+      const audioContext = new AudioContextClass()
+      const analyser = audioContext.createAnalyser()
+      const source = audioContext.createMediaStreamSource(stream)
+
+      analyser.fftSize = 256
+      source.connect(analyser)
+
+      audioContextRef.current = audioContext
+      analyserRef.current = analyser
+
+      // Keep track of the audio tracks
+      if (!streamRef.current) {
+        streamRef.current = stream
+      } else {
+        stream.getTracks().forEach(t => streamRef.current?.addTrack(t))
+      }
+
+      setMicStatus({ type: 'success' })
+
+      // Start monitoring volume
+      const bufferLength = analyser.frequencyBinCount
+      const dataArray = new Uint8Array(bufferLength)
+
+      const updateVolume = () => {
+        if (!analyserRef.current) return
+        analyserRef.current.getByteFrequencyData(dataArray)
+        let sum = 0
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i]
+        }
+        const average = sum / bufferLength
+        setVolume(average)
+        requestAnimationFrame(updateVolume)
+      }
+      updateVolume()
+
+    } catch (err) {
+      console.error(err)
+      setMicStatus({ type: 'error', message: 'ไม่สามารถเข้าถึงไมโครโฟนได้' })
+    }
+  }
+
+  /* ================= SPEAKER CHECK ================= */
+  const testSpeaker = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext
+      const ctx = new AudioContextClass()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(440, ctx.currentTime) // A4 note
+
+      gain.gain.setValueAtTime(0, ctx.currentTime)
+      gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + 0.05)
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5)
+
+      osc.start(ctx.currentTime)
+      osc.stop(ctx.currentTime + 0.5)
+
+      setSpeakerStatus({ type: 'success' })
+    } catch (err) {
+      console.error(err)
+      setSpeakerStatus({ type: 'error', message: 'ไม่สามารถทดสอบเสียงได้' })
+    }
+  }
+
+  const allReady = cameraStatus.type === 'success' &&
+    micStatus.type === 'success' &&
+    speakerStatus.type === 'success'
+
+  return (
+    <div className="w-full max-w-4xl mx-auto px-6 py-12 animate-fade-in flex flex-col min-h-[80vh]">
+      
+      {/* Step Progress */}
+      <div className="flex items-center justify-center gap-4 mb-12">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold">✓</div>
+          <span className="text-sm font-bold text-gray-500 hidden sm:block">ยืนยันตัวตน</span>
+        </div>
+        <div className="w-12 h-0.5 bg-green-200" />
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold animate-pulse">2</div>
+          <span className="text-sm font-bold text-primary">ตรวจเช็คอุปกรณ์</span>
+        </div>
+        <div className="w-12 h-0.5 bg-gray-200" />
+        <div className="flex items-center gap-2 opacity-40">
+          <div className="w-8 h-8 rounded-full bg-gray-300 text-white flex items-center justify-center text-sm font-bold">3</div>
+          <span className="text-sm font-bold text-gray-500 hidden sm:block">ยินยอมรับบริการ</span>
+        </div>
+      </div>
+
+      <div className="text-center mb-12">
+        <h1 className="text-4xl md:text-5xl font-black text-gray-900 mb-4">ตรวจสอบความพร้อม</h1>
+        <p className="text-xl text-gray-500">กรุณาทดสอบ กล้อง ไมโครโฟน และลำโพง เพื่อเข้าสู่การประเมิน</p>
+      </div>
+
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+
+        {/* 1. Camera Card */}
+        <div className={`bg-white rounded-[32px] p-8 border-4 transition-all shadow-xl flex flex-col items-center
+          ${cameraStatus.type === 'success' ? 'border-green-400 bg-green-50/30' : 'border-gray-100'}`}>
+          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
+            <Camera size={32} />
+          </div>
+          <h3 className="text-2xl text-black font-bold mb-4">1. กล้อง</h3>
+
+          <div className="relative w-full aspect-square bg-gray-900 rounded-[24px] overflow-hidden mb-6 shadow-inner">
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-cover"
+            />
+            {cameraStatus.type !== 'success' && (
+              <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+                {cameraStatus.type === 'loading' ? (
+                  <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Camera size={48} className="opacity-20" />
+                )}
+              </div>
+            )}
+          </div>
+
+          {cameraStatus.type === 'idle' || cameraStatus.type === 'error' ? (
+            <button
+              onClick={checkCamera}
+              className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">
+              ทดสอบกล้อง
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 text-green-600 font-bold">
+              <CheckCircle2 size={20} /> พร้อมใช้งาน
+            </div>
+          )}
+          {cameraStatus.type === 'error' && <p className="text-red-500 text-sm mt-2">{cameraStatus.message}</p>}
+        </div>
+
+        {/* 2. Microphone Card */}
+        <div className={`bg-white rounded-[32px] p-8 border-4 transition-all shadow-xl flex flex-col items-center
+          ${micStatus.type === 'success' ? 'border-green-400 bg-green-50/30' : 'border-gray-100'}`}>
+          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
+            <Mic size={32} />
+          </div>
+          <h3 className="text-2xl text-black  font-bold mb-4">2. ไมโครโฟน</h3>
+
+          <div className="w-full flex-grow flex flex-col items-center justify-center gap-6 mb-6">
+            {/* Volume Visualizer */}
+            <div className="w-full h-24 bg-gray-50 rounded-2xl flex items-end justify-center gap-1 p-4 overflow-hidden border border-gray-100">
+              {[...Array(12)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-full bg-blue-500 rounded-full transition-all duration-75"
+                  style={{ height: micStatus.type === 'success' ? `${Math.max(5, volume * (1 + Math.sin(i)))}%` : '5%' }}
+                />
+              ))}
+            </div>
+            {micStatus.type === 'success' && (
+              <p className="text-sm text-gray-400 animate-pulse">กรุณาลองพูดเพื่อทดสอบความไว...</p>
+            )}
+          </div>
+
+          {micStatus.type === 'idle' || micStatus.type === 'error' ? (
+            <button
+              onClick={checkMic}
+              className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">
+              ทดสอบไมค์
+            </button>
+          ) : (
+            <div className="flex items-center gap-2 text-green-600 font-bold">
+              <CheckCircle2 size={20} /> พร้อมใช้งาน
+            </div>
+          )}
+          {micStatus.type === 'error' && <p className="text-red-500 text-sm mt-2">{micStatus.message}</p>}
+        </div>
+
+        {/* 3. Speaker Card */}
+        <div className={`bg-white rounded-[32px] p-8 border-4 transition-all shadow-xl flex flex-col items-center
+          ${speakerStatus.type === 'success' ? 'border-green-400 bg-green-50/30' : 'border-gray-100'}`}>
+          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mb-6">
+            <Volume2 size={32} />
+          </div>
+          <h3 className="text-2xl text-black  font-bold mb-4">3. ลำโพง</h3>
+
+          <div className="w-full flex-grow flex flex-col items-center justify-center mb-6">
+            <button
+              onClick={testSpeaker}
+              className="w-24 h-24 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center hover:bg-blue-100 transition-all hover:scale-110 active:scale-95 group">
+              <Play size={40} className="ml-1 group-hover:animate-pulse" />
+            </button>
+            <p className="text-sm text-gray-400 mt-4 text-center">คลิกเพื่อฟังเสียงทดสอบ</p>
+          </div>
+
+          {speakerStatus.type === 'success' ? (
+            <div className="flex items-center gap-2 text-green-600 font-bold">
+              <CheckCircle2 size={20} /> ได้ยินชัดเจน
+            </div>
+          ) : (
+            <button
+              onClick={testSpeaker}
+              className="w-full py-3 border-2 border-blue-600 text-blue-600 rounded-xl font-bold hover:bg-blue-50 transition-colors">
+              ทดสอบเสียง
+            </button>
+          )}
+        </div>
+
+      </div>
+
+      {/* Troubleshooting */}
+      {(!allReady && (cameraStatus.type === 'error' || micStatus.type === 'error')) && (
+        <div className="bg-red-50 border-2 border-red-200 rounded-3xl p-6 mb-12 flex items-start gap-4 animate-shake">
+          <AlertCircle className="text-red-600 shrink-0 mt-1" size={24} />
+          <div>
+            <h4 className="text-lg font-bold text-red-900 mb-1">พบปัญหาการเข้าถึงอุปกรณ์</h4>
+            <p className="text-red-700">
+              กรุณาตรวจสอบว่าท่านได้ "อนุญาต" (Allow) การเข้าถึงกล้องและไมโครโฟนในเบราว์เซอร์แล้ว
+              หากยังไม่สามารถใช้งานได้ กรุณารีเฟรชหน้านี้หรือเปลี่ยนไปใช้ Google Chrome
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Action Button */}
+      <div className="flex justify-center mt-auto">
+        <button
+          onClick={() => router.push('/consent')}
+          disabled={!allReady}
+          className={`
+            w-full max-w-lg py-6 rounded-[28px] text-3xl font-black shadow-2xl transition-all flex items-center justify-center gap-4
+            ${allReady
+              ? 'bg-blue-600 text-white hover:bg-blue-700 hover:-translate-y-1 hover:shadow-blue-200/50'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'}
+          `}
+        >
+          <span>เริ่มการประเมิน</span>
+          <ArrowRight size={36} strokeWidth={3} />
+        </button>
+      </div>
+
+      <style jsx>{`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          75% { transform: translateX(5px); }
+        }
+        .animate-shake {
+          animation: shake 0.4s ease-in-out;
+        }
+      `}</style>
+    </div>
+  )
+}

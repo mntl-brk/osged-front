@@ -50,7 +50,7 @@ export default function VerificationRoute() {
             setParticipantId(code)
             setWithInTest(withIn)
             
-            router.push('/consent')
+            router.push('/check-readiness')
           }}
         />
       </AppShell>

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import { useAssessmentStore } from '@/store/assessmentStore'
 import { useVoiceGuideControl } from '@/contexts/VoiceGuideContext'
 import { useEffect } from 'react'
+import { StepGuide } from '@/components/public/StepGuide'
 
 export default function HomePage() {
   const router = useRouter()
@@ -25,7 +26,8 @@ export default function HomePage() {
     return () => {
       setEnabled(true)
     }
-  }, [])
+  }, [resetAll, setEnabled])
+
 
   return (
     <AppShell>
@@ -35,7 +37,10 @@ export default function HomePage() {
         onOpenPDPA={() => setModalContent('pdpa')}
       />
 
+      <StepGuide />
+
       <InfoSection onReadMore={() => setModalContent('project-info')} />
+
 
       <Footer
         onOpenInfo={() => setModalContent('project-info')}
