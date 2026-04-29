@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle } from 'lucide-react'
+import { Video, ShieldCheck, HeartPulse } from 'lucide-react'
 
 interface Props {
   open: boolean
@@ -11,64 +11,72 @@ export default function DataCollectionNoticeModal({ open, onConfirm }: Props) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-
-      <div className="bg-white rounded-2xl max-w-xl w-full p-7 shadow-2xl animate-in fade-in zoom-in border border-yellow-200">
-
-        {/* Header */}
-        <div className="flex items-start gap-3 mb-5">
-
-          <div className="bg-yellow-100 p-2 rounded-lg">
-            <AlertTriangle className="text-yellow-600" size={30} />
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/70 backdrop-blur-sm px-4 sm:px-6 animate-fade-in">
+      <div 
+        className="bg-white rounded-3xl max-w-xl w-full p-0 shadow-2xl overflow-hidden transform transition-all"
+        role="dialog"
+        aria-modal="true"
+      >
+        {/* Header Section */}
+        <div className="bg-blue-50/50 p-6 sm:p-8 border-b border-blue-100 flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100 shrink-0 relative">
+            <Video className="text-blue-600" size={36} strokeWidth={2.5} />
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
           </div>
-
           <div>
-            <h2 className="text-xl font-bold text-yellow-700">
-              การแจ้งการเก็บข้อมูลสำคัญ
+            <h2 className="text-2xl font-black text-gray-900 mb-2">
+              แจ้งเตือนสำคัญ: <br className="sm:hidden" /> การบันทึกภาพและเสียง
             </h2>
-
-            <p className="text-base text-gray-700 mt-1">
-              เว็บไซต์นี้มีการเก็บข้อมูลส่วนบุคคลของผู้เข้าร่วม
-              และมีการ <span className="font-semibold text-red-600">บันทึกภาพและเสียงวิดีโอ</span>
-              ระหว่างการทำแบบทดสอบ
+            <p className="text-gray-600">
+              ในการทำแบบประเมินสุขภาพจิตและคัดกรองสมองเสื่อมนี้ ระบบจำเป็นต้อง
+              <strong className="text-red-600 font-bold mx-1">บันทึกภาพและเสียงวิดีโอ</strong> 
+              ตลอดการทำแบบสอบถาม
             </p>
           </div>
-
         </div>
 
-        {/* Content */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-base text-gray-800 space-y-3">
-
-          <p className="font-medium">
-            ข้อมูลดังกล่าวจะถูกนำไปใช้เพื่อ
+        {/* Content Section */}
+        <div className="p-6 sm:p-8 space-y-6">
+          <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <HeartPulse className="text-primary" size={20} />
+              ข้อมูลของท่านจะถูกนำไปใช้อย่างปลอดภัยเพื่อ:
+            </h3>
+            <ul className="space-y-3">
+              <li className="flex items-start gap-3">
+                <ShieldCheck className="text-green-500 shrink-0 mt-0.5" size={18} />
+                <span className="text-gray-700">การประเมินและวิเคราะห์ผลทางการแพทย์อย่างแม่นยำ</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <ShieldCheck className="text-green-500 shrink-0 mt-0.5" size={18} />
+                <span className="text-gray-700">การศึกษาและวิจัยเพื่อพัฒนานวัตกรรมการดูแลผู้สูงอายุ</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <ShieldCheck className="text-green-500 shrink-0 mt-0.5" size={18} />
+                <span className="text-gray-700">การพัฒนาคุณภาพบริการและระบบวิเคราะห์ทางการแพทย์ (OSGED)</span>
+              </li>
+            </ul>
+          </div>
+          
+          <p className="text-center text-gray-500 text-sm italic">
+            * ข้อมูลทั้งหมดจะถูกเก็บรักษาเป็นความลับตามนโยบายคุ้มครองข้อมูลส่วนบุคคล (PDPA)
           </p>
-
-          <ul className="list-disc pl-6 space-y-2">
-            <li>การประเมินและวิเคราะห์ผลทางการแพทย์</li>
-            <li>การศึกษาและการวิจัยทางการแพทย์</li>
-            <li>การพัฒนาคุณภาพบริการและระบบวิเคราะห์ทางการแพทย์</li>
-          </ul>
-
-          <p className="pt-1 font-medium text-gray-700">
-            กรุณาอ่านรายละเอียดและให้ความยินยอมก่อนดำเนินการต่อ
-          </p>
-
         </div>
 
-        {/* Button */}
-        <div className="mt-6 flex justify-end">
+        {/* Footer / Action */}
+        <div className="p-6 sm:p-8 border-t border-gray-100 bg-gray-50 flex flex-col items-center">
           <button
             onClick={onConfirm}
             className="
-              px-6 py-3
-              rounded-xl
-              bg-yellow-500
-              text-white
-              font-bold
-              text-lg
-              shadow-md
-              hover:bg-yellow-600
-              transition
+              w-full sm:w-auto px-8 py-4
+              rounded-2xl
+              bg-primary text-white
+              font-bold text-lg
+              shadow-[0_8px_30px_rgba(37,99,235,0.2)]
+              hover:bg-primaryHover hover:shadow-[0_8px_30px_rgba(37,99,235,0.3)]
+              hover:-translate-y-0.5
+              transition-all duration-300
             "
           >
             รับทราบและดำเนินการต่อ
@@ -76,7 +84,6 @@ export default function DataCollectionNoticeModal({ open, onConfirm }: Props) {
         </div>
 
       </div>
-
     </div>
   )
 }
