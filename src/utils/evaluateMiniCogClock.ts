@@ -18,9 +18,21 @@ export const NUMBER_TOLERANCE_DEG = 20
 export const HAND_TOLERANCE_DEG = 10
 export const INSIDE_HAND_ZONE_RADIUS = 22
 
-/** 11:10 target: minute hand → "2" (10 minutes = 10/60 * 360°), hour hand → "11". */
+/**
+ * Ideal 11:10 reference angles: minute hand → "2" (10 min = 10/60 * 360°),
+ * hour hand → "11". These are the *canonical* targets (used when numbers are
+ * placed perfectly). Actual hand scoring now measures each hand against the
+ * angle of the number the patient actually drew (see gate 4) — so a clock
+ * that is internally consistent (hand points at the patient's own "11"/"2")
+ * passes even if the whole face is rotated. Kept exported for tests and as
+ * the perfect-placement baseline.
+ */
 export const MINUTE_HAND_TARGET_DEG = 60
 export const HOUR_HAND_TARGET_DEG = 330
+
+/** Numbers whose drawn angle anchors the two hands. */
+export const HOUR_REFERENCE_NUMBER = 11
+export const MINUTE_REFERENCE_NUMBER = 2
 
 export const DISTRACTOR_IDS = [13, 14, 15, 16]
 export const REQUIRED_NUMBERS = Array.from({ length: 12 }, (_, i) => i + 1)
@@ -271,21 +283,27 @@ export function evaluateMiniCogClock(
     }
   }
 
-  const hourDeviation = angularDeviation(hourEl.angle, HOUR_HAND_TARGET_DEG)
-  const minuteDeviation = angularDeviation(minuteEl.angle, MINUTE_HAND_TARGET_DEG)
+  // Anchor each hand to the number the patient actually drew, not the ideal
+  // 330°/60°. Completeness gate above guarantees both reference numbers exist,
+  // so `!` is safe. This scores whether the hand points at *their* 11/2.
+  const hourTarget = numberAudit.find((a) => a.id === HOUR_REFERENCE_NUMBER)!.actualAngle
+  const minuteTarget = numberAudit.find((a) => a.id === MINUTE_REFERENCE_NUMBER)!.actualAngle
+
+  const hourDeviation = angularDeviation(hourEl.angle, hourTarget)
+  const minuteDeviation = angularDeviation(minuteEl.angle, minuteTarget)
 
   const handAudit: HandAngleAudit[] = [
     {
       hand: 'hour',
       actualAngle: hourEl.angle,
-      targetAngle: HOUR_HAND_TARGET_DEG,
+      targetAngle: hourTarget,
       deviation: hourDeviation,
       withinTolerance: hourDeviation <= HAND_TOLERANCE_DEG,
     },
     {
       hand: 'minute',
       actualAngle: minuteEl.angle,
-      targetAngle: MINUTE_HAND_TARGET_DEG,
+      targetAngle: minuteTarget,
       deviation: minuteDeviation,
       withinTolerance: minuteDeviation <= HAND_TOLERANCE_DEG,
     },
@@ -350,7 +368,7 @@ export function evaluateMiniCogClock(
       reasons: misplacedHands.map(
         (a) =>
           `${a.hand === 'hour' ? 'Hour' : 'Minute'} hand is ${a.deviation.toFixed(1)}° off target ` +
-          `(target ${a.targetAngle}°, tolerance ±${HAND_TOLERANCE_DEG}°)`
+          `(target ${a.targetAngle.toFixed(1)}° — the drawn ${a.hand === 'hour' ? HOUR_REFERENCE_NUMBER : MINUTE_REFERENCE_NUMBER}, tolerance ±${HAND_TOLERANCE_DEG}°)`
       ),
       audit: { numbers: numberAudit, hands: handAudit },
     }
