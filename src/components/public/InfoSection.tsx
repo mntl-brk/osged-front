@@ -1,5 +1,9 @@
 import { BookOpen, ShieldCheck, Zap, HeartPulse } from 'lucide-react';
 
+interface InfoSectionProps {
+  onReadMore?: () => void;
+}
+
 export const InfoSection: React.FC<InfoSectionProps> = ({ onReadMore }) => {
   const features = [
     {
